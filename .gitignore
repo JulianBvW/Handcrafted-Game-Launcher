@@ -1,0 +1,37 @@
+# Working material, not part of the repo
+refs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors and desktop
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Handcrafted's own runtime data, in case it gets written here while testing
+state.json
+config.json
+library.db
+images/
