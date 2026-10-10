@@ -8,7 +8,8 @@ a list of image links. That is where the name comes from.
 
 ## Status
 
-In development. Nothing to run yet.
+In development. It opens an empty window that remembers its size, and that
+is all for now.
 
 ## Requirements
 
@@ -20,6 +21,41 @@ sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1
 
 Use `/usr/bin/python3`, not `python3`. On a machine with conda or miniforge
 in the PATH, the latter has no `gi`.
+
+## Run
+
+From the repository:
+
+```
+/usr/bin/python3 -m handcrafted
+```
+
+Starting it a second time brings the open window to the front.
+
+The library lives in `~/.local/share/handcrafted/`, the window size in
+`~/.config/handcrafted/state.json`. A few things can be set in
+`~/.config/handcrafted/config.json`:
+
+```json
+{
+  "width": 1600,
+  "height": 900,
+  "data_dir": "~/.local/share/handcrafted"
+}
+```
+
+`width` and `height` are the size of the very first window. After that, the
+size it was last left at wins. A missing, broken or half-wrong file is not
+an error: whatever cannot be used is ignored.
+
+## Tests
+
+No test runner to install. Run each file directly:
+
+```
+/usr/bin/python3 tests/test_config.py   # the settings file
+/usr/bin/python3 tests/test_state.py    # the remembered window size
+```
 
 ## What it will not do
 

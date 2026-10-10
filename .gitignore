@@ -31,7 +31,7 @@ htmlcov/
 .DS_Store
 
 # Handcrafted's own runtime data, in case it gets written here while testing
-state.json
-config.json
-library.db
-images/
+/state.json
+/config.json
+/library.db
+/images/
