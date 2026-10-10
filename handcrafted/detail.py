@@ -99,7 +99,10 @@ class Detail(Gtk.ScrolledWindow):
             column.append(body)
 
         column.append(self._figures(game))
-        column.append(self._gallery(game, pictures))
+        if pictures:
+            # Without images, nothing: a placeholder here would only say
+            # what the empty space already does.
+            column.append(self._gallery(game, pictures))
 
         clamp = Adw.Clamp(maximum_size=CONTENT_WIDTH,
                           tightening_threshold=CONTENT_WIDTH)
@@ -206,18 +209,11 @@ class Detail(Gtk.ScrolledWindow):
         grid = Gtk.Grid(column_homogeneous=True, column_spacing=16,
                         row_spacing=16)
         grid.add_css_class('gallery')
-        if not pictures:
-            empty = Ratio(Cover(None, game.name, GALLERY_WIDTH, stripe=12,
-                                placeholder_text=_('no images')))
-            empty.add_css_class('gallery-empty')
-            grid.attach(empty, 0, 0, 1, 1)
-            # An empty second column keeps the placeholder at half width.
-            grid.attach(Gtk.Box(hexpand=True), 1, 0, 1, 1)
-            return grid
         for n, path in enumerate(pictures):
             cell = Ratio(Cover(path, game.name, GALLERY_WIDTH))
             cell.add_css_class('gallery-image')
             grid.attach(cell, n % 2, n // 2, 1, 1)
         if len(pictures) == 1:
+            # An empty second column keeps a single image at half width.
             grid.attach(Gtk.Box(hexpand=True), 1, 0, 1, 1)
         return grid

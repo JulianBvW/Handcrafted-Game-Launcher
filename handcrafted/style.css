@@ -363,9 +363,6 @@ window.handcrafted button.status-menu:hover .figure {
 .gallery-image .cover {
     border-radius: 12px;
 }
-.gallery-empty .cover {
-    border-radius: 14px;
-}
 
 /* -- scrollbars -------------------------------------------------------- */
 scrollbar,

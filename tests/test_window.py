@@ -78,6 +78,15 @@ def find(widget, kind):
     return None
 
 
+def grids(widget):
+    found = [widget] if isinstance(widget, Gtk.Grid) else []
+    child = widget.get_first_child()
+    while child is not None:
+        found.extend(grids(child))
+        child = child.get_next_sibling()
+    return found
+
+
 def launcher_file(name):
     path = folder / 'games' / name / 'run.sh'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -119,7 +128,9 @@ window.select(beta)
 shown = texts(detail)
 check('a selection changes the title', 'The Beta' in shown)
 check('and the figures', 'Never' in shown and '0h' in shown, shown)
-check('a game without images shows the placeholder', 'no images' in shown)
+check('a game without images shows no gallery and no placeholder',
+      'no images' not in shown
+      and not any('gallery' in g.get_css_classes() for g in grids(detail)))
 check('and its rail row a placeholder initial, skipping "The"',
       'B' in texts(rail))
 
