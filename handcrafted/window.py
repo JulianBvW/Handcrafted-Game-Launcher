@@ -172,6 +172,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         # the keyboard, so Tab cannot wander into a Play button behind it.
         self._body.set_can_focus(False)
         self._body.set_can_target(False)
+        self._body.add_css_class('behind-dialog')
 
     def close_editor(self):
         if self._dialog is not None:
@@ -185,6 +186,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             self._dialog_folder = None
             self._body.set_can_focus(True)
             self._body.set_can_target(True)
+            self._body.remove_css_class('behind-dialog')
 
     def _save_editor(self, fields, pictures, pictures_changed):
         if self._dialog is None:

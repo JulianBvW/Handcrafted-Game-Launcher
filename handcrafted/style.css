@@ -381,10 +381,15 @@ scrollbar slider {
 
 /* -- dialog ------------------------------------------------------------ */
 /* Laid over the whole window: no card, no frame, the form stands directly
-   on this. Denser than the draft's .82, which counted on a blur GTK 4.14
-   cannot do. */
+   on this. GTK 4.14 cannot blur what lies behind a widget (no
+   backdrop-filter), but it can blur the library itself while the dialog is
+   open -- the same look, from the other side. With that, the draft's .82
+   is back. */
+.behind-dialog {
+    filter: blur(14px);
+}
 .scrim {
-    background-color: rgba(6, 6, 7, 0.92);
+    background-color: rgba(6, 6, 7, 0.82);
     padding: 32px;
 }
 .scrim scrolledwindow,
