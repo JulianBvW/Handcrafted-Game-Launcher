@@ -100,6 +100,16 @@ def background(window):
                 for c in ('hero-veil-across', 'hero-veil-up'))]
 
 
+CLOCK = [5000.0]
+
+
+def scroll(window, dy, x=900, y=400):
+    '''A scroll of one movement of its own: well apart in time from the
+    last, so neither the lock nor the previous movement is in play.'''
+    CLOCK[0] += 5
+    return window._on_page_scroll(dy, True, lambda: (x, y), now=CLOCK[0])
+
+
 def picture(name):
     path = folder / 'incoming' / f'{name}.png'
     path.parent.mkdir(exist_ok=True)
@@ -121,14 +131,16 @@ section('Nothing played yet')
 
 window = HandcraftedWindow(library, launcher)
 check('the window opens on the library', window.page == 'library')
-check('with no way up to a hero', not window._rail._to_hero.get_visible())
+scroll(window, -3.0)
+check('scrolling up leads nowhere', window.page == 'library')
 window.show_hero()
-check('and none to be had', window.page == 'library')
+check('nor does anything else', window.page == 'library')
 launcher.launch(ids['Leaf'])
 launcher.stop()
-check('once something was played, the way up is there',
-      window._rail._to_hero.get_visible())
-check('but the window stays where it is', window.page == 'library')
+check('once something was played, the window stays where it is',
+      window.page == 'library')
+scroll(window, -1.0)
+check('but scrolling up now leads to the hero', window.page == 'hero')
 window.close_now()
 
 section('With games played')
@@ -173,8 +185,39 @@ details = next(b for b in all_of(window._hero_page, lambda w: isinstance(
 details.emit('clicked')
 check('Details goes to the library', window.page == 'library')
 check('with that game selected', window._selected == ids['Lamp'])
-window._rail._to_hero.emit('clicked')
-check('"↑ Hero" goes back up', window.page == 'hero')
+check('the "↑ Hero" button is gone', '↑ Hero' not in texts(window._rail))
+
+# Under the pointer: the detail column, scrolled down a way.
+inside = window._detail.get_child()
+window.pick = lambda x, y, flags: inside
+adjustment = window._detail.get_vadjustment()
+adjustment.configure(300, 0, 2000, 10, 100, 500)
+check('scrolling up over a list that is not at its top is passed on',
+      scroll(window, -1.0) is False and window.page == 'library')
+adjustment.set_value(0)
+check('at its top, it goes back up to the hero',
+      scroll(window, -1.0) is True and window.page == 'hero')
+check('and down in the hero goes down again',
+      scroll(window, 1.0) is True and window.page == 'library')
+del window.pick
+# On X11 a scroll event has no position: then both lists must be at the top.
+window.show_library()
+CLOCK[0] += 5
+adjustment.configure(300, 0, 2000, 10, 100, 500)
+check('with the pointer unknown, a list scrolled down keeps it here',
+      window._on_page_scroll(-1.0, True, lambda: None, now=CLOCK[0]) is False
+      and window.page == 'library')
+adjustment.set_value(0)
+CLOCK[0] += 5
+check('and with both at their top, up goes to the hero',
+      window._on_page_scroll(-1.0, True, lambda: None, now=CLOCK[0])
+      and window.page == 'hero')
+window.show_library()
+window.open_editor(ids['Lamp'])
+check('with the dialog open, scrolling changes nothing',
+      scroll(window, -1.0) is False and window.page == 'library')
+window.close_editor()
+window.show_hero()
 
 section('Running')
 
@@ -267,7 +310,8 @@ for game in recent(library.games(), limit=100):
 window.refresh()
 check('once nothing played is left, there is no hero', window._hero is None)
 check('and the window is in the library', window.page == 'library')
-check('with no way up', not window._rail._to_hero.get_visible())
+scroll(window, -1.0)
+check('and scrolling up stays there', window.page == 'library')
 
 window.close_now()
 library.close()

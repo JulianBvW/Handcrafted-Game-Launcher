@@ -11,8 +11,9 @@ a list of image links. That is where the name comes from.
 In development, and usable: add, edit and delete games, give them images
 from a list of links, see them grouped by status, play and stop them with
 the time measured. Once something has been played, the window opens on a
-hero with the game played last and the four most recent as tiles. Scrolling
-between hero and library comes next.
+hero with the game played last and the four most recent as tiles. Scroll
+down to get from the hero to the library, and up again, from the top of the
+list, to get back (or Alt+Down and Alt+Up). An installer comes next.
 
 To look at it without a library of your own, fill a throwaway one:
 
@@ -60,6 +61,10 @@ used. `width` and `height` are the size of the very first window. After
 that, the size it was last left at wins. A missing, broken or half-wrong
 file is not an error: whatever cannot be used is ignored.
 
+If moving between hero and library stutters, start it with
+`HANDCRAFTED_DEBUG_FRAMES=1` in front: each change of page then prints how
+long its frames took, which tells a slow program from a busy machine.
+
 ## Tests
 
 No test runner to install. Run each file directly:
@@ -72,6 +77,8 @@ No test runner to install. Run each file directly:
 /usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
 /usr/bin/python3 tests/test_launch.py       # starting and timing games
 /usr/bin/python3 tests/test_download.py     # images from links, locally
+/usr/bin/python3 tests/test_paging.py       # when scrolling changes the page
+/usr/bin/python3 tests/test_thumbs.py       # images read and kept
 DISPLAY=:0 /usr/bin/python3 tests/test_window.py   # the library view
 DISPLAY=:0 /usr/bin/python3 tests/test_dialog.py   # adding and editing
 DISPLAY=:0 /usr/bin/python3 tests/test_hero.py     # the hero and its tiles

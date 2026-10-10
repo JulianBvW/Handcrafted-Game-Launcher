@@ -3,16 +3,19 @@ side -- below it, and the dialog laid over both when a game is added or
 edited.
 
 There is a hero only once something has been played; until then the window
-is the library alone. Moving between the two by scrolling comes in phase 8;
-for now Details goes down and the rail's "↑ Hero" back up.
+is the library alone. Scrolling moves between the two (paging.py has the
+rules), as do Details, and Alt+Up and Alt+Down.
 '''
+
+import os
+import time
 
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import config, download, images, state  # noqa: E402
+from . import config, download, images, paging, state  # noqa: E402
 from .detail import Detail  # noqa: E402
 from .hero import Hero  # noqa: E402
 from .dialog import GameDialog  # noqa: E402
@@ -57,8 +60,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self.add_action(self._status)
 
         self._rail = Rail(on_select=self.select,
-                          on_add=lambda: self.open_editor(None),
-                          on_hero=self.show_hero)
+                          on_add=lambda: self.open_editor(None))
         self._detail = Detail(
             on_play=self._on_play,
             on_edit=self.open_editor,
@@ -77,6 +79,19 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             transition_duration=450)
         self._pages.add_named(self._hero_page, 'hero')
         self._pages.add_named(body, 'library')
+        # Captured on the way down, before the rail or the detail column
+        # scroll by it: whether they get it at all is decided here.
+        self._pager = paging.Pager()
+        scroll = Gtk.EventControllerScroll(
+            flags=Gtk.EventControllerScrollFlags.VERTICAL)
+        scroll.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        scroll.connect('scroll', self._on_scroll)
+        self._pages.add_controller(scroll)
+        self._add_shortcuts()
+        self._frames = None  # frame times of a change of page, when asked
+        if os.environ.get('HANDCRAFTED_DEBUG_FRAMES'):
+            self._pages.connect('notify::transition-running',
+                                self._time_frames)
         # The dialog is not a window of its own: Adw.Dialog only stays inside
         # an Adw window, and this one is a plain GTK window for the sake of
         # the desktop's title bar. So it is laid over the pages instead.
@@ -158,8 +173,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         if self._hero is None and self.page == 'hero':
             self._pages.set_visible_child_name('library')
 
-        self._rail.refresh(games, self._selected, running,
-                           has_hero=self._hero is not None)
+        self._rail.refresh(games, self._selected, running)
         self._detail.show(game, running, self._error_for(self._selected))
         self._hero_drawing = None
         if self._hero is not None:
@@ -174,6 +188,101 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
     def _draw_hero(self):
         if self._hero_drawing is not None:
             self._hero_page.show(*self._hero_drawing)
+
+    # -- moving between the pages ------------------------------------------
+
+    def _on_scroll(self, controller, _dx, dy):
+        wheel = controller.get_unit() == Gdk.ScrollUnit.WHEEL
+        return self._on_page_scroll(
+            dy, wheel, lambda: self._pointer(controller.get_current_event()))
+
+    def _pointer(self, event):
+        '''Where the pointer is, in the window, or None if that cannot be
+        told. Not from the scroll event itself: on X11 GTK gives those no
+        position at all.'''
+        if event is None or event.get_device() is None:
+            return None
+        surface = self.get_surface()
+        if surface is None:
+            return None
+        found, x, y, _mask = surface.get_device_position(event.get_device())
+        if not found:
+            return None
+        # Surface positions may start before the window's own top left.
+        offset_x, offset_y = self.get_surface_transform()
+        return x - offset_x, y - offset_y
+
+    def _on_page_scroll(self, dy, wheel, pointer, now=None):
+        '''A scroll of `dy`. `pointer` tells where the pointer is in the
+        window, (x, y) or None, and is only asked when that matters.
+        Returns whether the scroll was used up here rather than passed
+        on.'''
+        if self._dialog is not None:
+            return False
+        target, swallowed = self._pager.feed(
+            dy, wheel, self.page, lambda: self._at_top(pointer()),
+            self._hero is not None,
+            time.monotonic() if now is None else now)
+        if target == 'hero':
+            self.show_hero()
+        elif target == 'library':
+            self.show_library()
+        return swallowed
+
+    def _at_top(self, position):
+        '''Whether the list under `position` -- (x, y) in the window -- is
+        scrolled to its top. Where there is no list, as over the rail's
+        head, there is nothing to scroll and so nothing in the way. Where
+        the pointer is not known, both lists have to be at their top.'''
+        if position is None:
+            return all(_scrolled_to_top(scroller) for scroller in
+                       (self._rail.scroller, self._detail))
+        widget = self.pick(*position, Gtk.PickFlags.DEFAULT)
+        while widget is not None and widget is not self._pages:
+            if isinstance(widget, Gtk.ScrolledWindow):
+                return _scrolled_to_top(widget)
+            widget = widget.get_parent()
+        return True
+
+    def _add_shortcuts(self):
+        '''Alt+Down and Alt+Up: the same, for the keyboard.'''
+        shortcuts = Gtk.ShortcutController()
+        for keys, move in (('<Alt>Down', self.show_library),
+                           ('<Alt>Up', self.show_hero)):
+            shortcuts.add_shortcut(Gtk.Shortcut(
+                trigger=Gtk.ShortcutTrigger.parse_string(keys),
+                action=Gtk.CallbackAction.new(self._shortcut, move)))
+        self.add_controller(shortcuts)
+
+    def _shortcut(self, _widget, _args, move):
+        if self._dialog is not None:
+            return False  # not ours to take while the dialog is up
+        move()
+        return True
+
+    def _time_frames(self, stack, _pspec):
+        '''With HANDCRAFTED_DEBUG_FRAMES set: how long each frame of a
+        change of page took, to tell a slow program from a busy machine.'''
+        if stack.get_transition_running():
+            clock = self.get_frame_clock()
+            if clock is not None:
+                stamps = []
+                handler = clock.connect(
+                    'after-paint',
+                    lambda _clock: stamps.append(time.monotonic()))
+                self._frames = (clock, handler, stamps)
+            return
+        if self._frames is None:
+            return  # its start was not seen
+        clock, handler, stamps = self._frames
+        self._frames = None
+        clock.disconnect(handler)
+        gaps = sorted(round((b - a) * 1000)
+                      for a, b in zip(stamps, stamps[1:]))
+        if gaps:
+            print(f'slide: {len(stamps)} frames, '
+                  f'median {gaps[len(gaps) // 2]} ms, max {gaps[-1]} ms',
+                  flush=True)
 
     def _error_for(self, game_id):
         if self._error is not None and self._error[0] == game_id:
@@ -341,3 +450,10 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             return  # dismissed, or withdrawn because the game ended
         if choice == 1:
             self.close_now()
+
+
+def _scrolled_to_top(scroller):
+    adjustment = scroller.get_vadjustment()
+    # Within half a pixel: settling after a fling can leave a fraction
+    # behind.
+    return adjustment.get_value() <= adjustment.get_lower() + 0.5

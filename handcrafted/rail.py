@@ -21,11 +21,10 @@ THUMB_HEIGHT = 59  # 104 at 16:9
 
 
 class Rail(Gtk.Box):
-    '''Calls on_select(game_id) when a game is clicked and on_hero() for
-    the way back up. The window decides what is selected and tells the rail
-    through refresh().'''
+    '''Calls on_select(game_id) when a game is clicked. The window decides
+    what is selected and tells the rail through refresh().'''
 
-    def __init__(self, on_select, on_add, on_hero):
+    def __init__(self, on_select, on_add):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class('rail')
         self.set_size_request(WIDTH, -1)
@@ -35,7 +34,6 @@ class Rail(Gtk.Box):
         self._only_playing = False
         self._selected = None
         self._running = None
-        self._has_hero = False
         self._games = ()
         self._drawn = None  # what the list was last built from
         self._rows = {}     # game id -> its row, for moving the selection
@@ -43,14 +41,6 @@ class Rail(Gtk.Box):
         head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         head.add_css_class('rail-head')
         self.append(head)
-
-        # Back to the hero; there only while there is one (DESIGN §13,
-        # fallback).
-        self._to_hero = Gtk.Button(label=_('↑ Hero'), halign=Gtk.Align.START,
-                                   visible=False)
-        self._to_hero.add_css_class('back-button')
-        self._to_hero.connect('clicked', lambda *_: on_hero())
-        head.append(self._to_hero)
 
         title_row = Gtk.Box(spacing=10)
         # Both on the baseline, so the small totals sit on the same line as
@@ -88,22 +78,21 @@ class Rail(Gtk.Box):
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._list.add_css_class('rail-list')
         self._list.connect('row-activated', self._on_row_activated)
-        scroller = Gtk.ScrolledWindow(vexpand=True)
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_child(self._list)
-        self.append(scroller)
+        self.scroller = Gtk.ScrolledWindow(vexpand=True)
+        self.scroller.set_policy(Gtk.PolicyType.NEVER,
+                                 Gtk.PolicyType.AUTOMATIC)
+        self.scroller.set_child(self._list)
+        self.append(self.scroller)
 
     # -- drawing -----------------------------------------------------------
 
-    def refresh(self, games, selected, running, has_hero=False):
+    def refresh(self, games, selected, running):
         '''Show `games` (library.Game, most recently active first) with
         `selected` marked and `running` (an id, or None) dotted.
 
         The list is only built again when something in it changed. A new
         selection alone only moves the mark.'''
         self._games = tuple(games)
-        self._has_hero = has_hero
-        self._to_hero.set_visible(has_hero)
         # The date too: "Today" in a row is "Yesterday" after midnight.
         drawn = (self._games, running, self._only_playing, date.today(),
                  images.stamp(images.cover(game.id) for game in games))
@@ -203,5 +192,4 @@ class Rail(Gtk.Box):
 
     def _on_switch(self, button):
         self._only_playing = button.get_active()
-        self.refresh(self._games, self._selected, self._running,
-                     self._has_hero)
+        self.refresh(self._games, self._selected, self._running)

@@ -253,13 +253,6 @@ window.handcrafted button.outline-button:hover {
     font-weight: 800;
     letter-spacing: -0.78px;
 }
-window.handcrafted button.back-button {
-    font-size: 13px;
-    color: @text_3;
-}
-window.handcrafted button.back-button:hover {
-    color: @text;
-}
 .rail-head .meta-muted {
     font-family: monospace;
 }
