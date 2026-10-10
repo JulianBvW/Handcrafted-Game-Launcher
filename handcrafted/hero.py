@@ -186,7 +186,7 @@ class Hero(Gtk.Stack):
 
             holder = Gtk.Box(halign=Gtk.Align.START)
             holder.set_layout_manager(
-                AfterAllocation(lambda: GLib.idle_add(cut)))
+                AfterAllocation(lambda: GLib.idle_add(cut), soft=True))
             holder.append(body)
             box.append(_clamped(holder, BODY_WIDTH))
 

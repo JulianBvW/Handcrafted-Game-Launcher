@@ -349,9 +349,10 @@ class AfterAllocation(Gtk.LayoutManager):
     '''Lays out its one child like a plain box, and says when it has: a
     text cut to a number of lines needs to know its width first.'''
 
-    def __init__(self, allocated):
+    def __init__(self, allocated, soft=False):
         super().__init__()
         self._allocated = allocated
+        self._soft = soft
         self._size = None
 
     def do_get_request_mode(self, _widget):
@@ -360,10 +361,13 @@ class AfterAllocation(Gtk.LayoutManager):
     def do_measure(self, widget, orientation, for_size):
         minimum, natural, _, _ = widget.get_first_child().measure(
             orientation, for_size)
-        if orientation == Gtk.Orientation.VERTICAL:
-            # Before it is cut, the whole text would ask for its whole
-            # height as a minimum, and hold the window open that tall.
-            # A wish, then: the cut that follows brings it down.
+        if self._soft and orientation == Gtk.Orientation.VERTICAL:
+            # Where the height is fixed (the hero): before it is cut, the
+            # whole text would ask for its whole height as a minimum and
+            # hold the window open that tall. A wish, then: the cut that
+            # follows brings it down. Not inside a scrolled column, which
+            # gives its content only the minimum -- there an unfolded text
+            # would spill over whatever comes after it.
             minimum = 0
         return minimum, natural, -1, -1
 

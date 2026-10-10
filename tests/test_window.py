@@ -326,6 +326,25 @@ check('and what is left fits in them',
 check('a sentence\'s own full stop gives way to "…"', '.…' not in cut, cut)
 check('a short one is not cut', folded(body, 'Short.', DESCRIPTION_LINES) is None)
 
+from handcrafted.widgets import AfterAllocation  # noqa: E402
+
+
+def held(soft):
+    text = make_label(long_text, 'detail-body', wrap=True)
+    box = Gtk.Box()
+    box.set_layout_manager(AfterAllocation(lambda: None, soft=soft))
+    box.append(text)
+    return box.measure(Gtk.Orientation.VERTICAL, 400).minimum, \
+        text.measure(Gtk.Orientation.VERTICAL, 400).minimum
+
+
+firm, text_needs = held(soft=False)
+check('in the scrolled detail column the text claims its height, so an '
+      'unfolded one pushes "Less" and the figures down',
+      firm == text_needs and firm > 0, (firm, text_needs))
+check('in the hero it only wishes for it',
+      held(soft=True)[0] == 0)
+
 section('Keys')
 
 window.select(alpha)
