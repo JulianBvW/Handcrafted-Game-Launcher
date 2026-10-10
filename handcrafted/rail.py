@@ -4,12 +4,14 @@
 Everything / Now playing switch -- over a list that scrolls by itself.
 '''
 
+from datetime import date
+
 import gi
 
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Pango  # noqa: E402
 
-from . import formatting, images  # noqa: E402
+from . import formatting, images, library  # noqa: E402
 from .i18n import _  # noqa: E402
 from .widgets import Cover, Fixed, dot, label, status_label  # noqa: E402
 
@@ -23,18 +25,20 @@ class Rail(Gtk.Box):
     the way back up. The window decides what is selected and tells the rail
     through refresh().'''
 
-    def __init__(self, library, on_select, on_add, on_hero):
+    def __init__(self, on_select, on_add, on_hero):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class('rail')
         self.set_size_request(WIDTH, -1)
         self.set_hexpand(False)
 
-        self._library = library
         self._on_select = on_select
         self._only_playing = False
         self._selected = None
         self._running = None
         self._has_hero = False
+        self._games = ()
+        self._drawn = None  # what the list was last built from
+        self._rows = {}     # game id -> its row, for moving the selection
 
         head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         head.add_css_class('rail-head')
@@ -91,17 +95,43 @@ class Rail(Gtk.Box):
 
     # -- drawing -----------------------------------------------------------
 
-    def refresh(self, selected, running, has_hero=False):
-        self._selected = selected
+    def refresh(self, games, selected, running, has_hero=False):
+        '''Show `games` (library.Game, most recently active first) with
+        `selected` marked and `running` (an id, or None) dotted.
+
+        The list is only built again when something in it changed. A new
+        selection alone only moves the mark.'''
+        self._games = tuple(games)
         self._has_hero = has_hero
         self._to_hero.set_visible(has_hero)
-        self._running = running
+        # The date too: "Today" in a row is "Yesterday" after midnight.
+        drawn = (self._games, running, self._only_playing, date.today(),
+                 images.stamp(images.cover(game.id) for game in games))
+        if drawn != self._drawn:
+            self._drawn = drawn
+            self._running = running
+            self._selected = selected
+            self._build()
+        else:
+            self._select(selected)
 
-        count, seconds = self._library.totals()
+    def _select(self, selected):
+        if selected == self._selected:
+            return
+        before = self._rows.get(self._selected)
+        if before is not None:
+            before.remove_css_class('selected')
+        after = self._rows.get(selected)
+        if after is not None:
+            after.add_css_class('selected')
+        self._selected = selected
+
+    def _build(self):
+        count, seconds = library.totals(self._games)
         self._totals.set_label(f'{count} · {formatting.playtime(seconds)}')
 
-        groups = self._library.grouped()
-        playing = next((len(games) for status, games in groups
+        groups = library.grouped(self._games)
+        playing = next((len(members) for status, members in groups
                         if status == 'playing'), 0)
         if self._only_playing:
             self._playing_label.set_label(
@@ -111,10 +141,13 @@ class Rail(Gtk.Box):
             self._playing_label.set_label(_('Now playing'))
 
         self._list.remove_all()
-        for status, games in groups:
-            self._list.append(self._group_head(status, len(games)))
-            for game in games:
-                self._list.append(self._game_row(game))
+        self._rows = {}
+        for status, members in groups:
+            self._list.append(self._group_head(status, len(members)))
+            for game in members:
+                row = self._game_row(game)
+                self._rows[game.id] = row
+                self._list.append(row)
 
     def _group_head(self, status, count):
         box = Gtk.Box(spacing=8)
@@ -170,4 +203,5 @@ class Rail(Gtk.Box):
 
     def _on_switch(self, button):
         self._only_playing = button.get_active()
-        self.refresh(self._selected, self._running, self._has_hero)
+        self.refresh(self._games, self._selected, self._running,
+                     self._has_hero)

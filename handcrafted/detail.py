@@ -5,13 +5,15 @@ over it, held to 1100 px: the title row with Play, the description, four
 figures, and every image.
 '''
 
+from datetime import date
+
 import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import formatting, images, launch  # noqa: E402
+from . import formatting, images, launch, thumbs  # noqa: E402
 from .i18n import _  # noqa: E402
 from .library import STATUSES  # noqa: E402
 from .widgets import (Cover, PlayButton, Ratio, dot, label,  # noqa: E402
@@ -31,15 +33,39 @@ class Detail(Gtk.ScrolledWindow):
         super().__init__(hexpand=True, vexpand=True)
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.add_css_class('detail')
-        self._on_play = on_play
-        self._on_edit = on_edit
         self._on_fix_path = on_fix_path
         self._shown = None
+        self._drawn = None  # what it was last drawn from
+
+        # Built once and moved into each new drawing: a MenuButton builds
+        # its whole popover when it gets a menu, and setting a tooltip is
+        # not free either -- too much to repeat for every game clicked.
+        self._play = PlayButton('large')
+        self._play.set_valign(Gtk.Align.END)
+        self._play.connect('clicked', lambda *_: on_play(self._shown))
+        self._gear = Gtk.Button(valign=Gtk.Align.END)
+        self._gear.set_child(Gtk.Image(icon_name='emblem-system-symbolic',
+                                       pixel_size=22))
+        self._gear.add_css_class('ring-button')
+        self._gear.set_tooltip_text(_('Edit game'))
+        self._gear.connect('clicked', lambda *_: on_edit(self._shown))
+        self._status_menu = self._build_status_menu()
 
     def show(self, game, running, error=None):
         '''Draw `game` (a library.Game, or None for an empty library).
         `running` is the id of the game that runs, or None. `error` is why
-        the last attempt to start this game failed, if it did.'''
+        the last attempt to start this game failed, if it did.
+
+        Does nothing if all of that, the images and the state of the
+        executable are what it was last drawn from.'''
+        pictures = images.listing(game.id) if game is not None else []
+        problem = launch.check(game.executable) if game is not None else None
+        drawn = (game, running, error, problem, date.today(),
+                 images.stamp(pictures))
+        if drawn == self._drawn:
+            return
+        self._drawn = drawn
+
         if game is None:
             empty = label(_('Your library is empty'), 'meta-muted',
                           xalign=0.5)
@@ -48,10 +74,9 @@ class Detail(Gtk.ScrolledWindow):
             self._shown = None
             return
 
-        pictures = images.listing(game.id)
         overlay = Gtk.Overlay()
         overlay.set_child(self._backdrop(game, pictures))
-        content = self._content(game, pictures, running, error)
+        content = self._content(game, pictures, running, error, problem)
         overlay.add_overlay(content)
         # The content, not the backdrop, decides how tall the column is.
         overlay.set_measure_overlay(content, True)
@@ -76,17 +101,17 @@ class Detail(Gtk.ScrolledWindow):
         backdrop = Gtk.Overlay(valign=Gtk.Align.START)
         backdrop.set_size_request(-1, BACKDROP_HEIGHT)
         if pictures:
-            backdrop.set_child(Cover(pictures[0], game.name, CONTENT_WIDTH))
+            # The hero's size: the same texture serves both.
+            backdrop.set_child(Cover(pictures[0], game.name, thumbs.LARGE))
             backdrop.add_css_class('backdrop')
             veil = Gtk.Box()
             veil.add_css_class('backdrop-veil')
             backdrop.add_overlay(veil)
         return backdrop
 
-    def _content(self, game, pictures, running, error):
+    def _content(self, game, pictures, running, error, problem):
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=22)
         column.add_css_class('detail-content')
-        problem = launch.check(game.executable)
         column.append(self._title_row(game, running, problem))
 
         if problem or error:
@@ -126,22 +151,12 @@ class Detail(Gtk.ScrolledWindow):
         left.append(eyebrow)
         left.append(title)
 
-        play = PlayButton('large')
-        play.set_valign(Gtk.Align.END)
-        play.set_mode(play_mode(game.id, problem, running))
-        play.connect('clicked', lambda *_: self._on_play(game.id))
-
-        gear = Gtk.Button(valign=Gtk.Align.END)
-        gear.set_child(Gtk.Image(icon_name='emblem-system-symbolic',
-                                 pixel_size=22))
-        gear.add_css_class('ring-button')
-        gear.set_tooltip_text(_('Edit game'))
-        gear.connect('clicked', lambda *_: self._on_edit(game.id))
+        self._play.set_mode(play_mode(game.id, problem, running))
 
         row = Gtk.Box(spacing=24)
         row.append(left)
-        row.append(play)
-        row.append(gear)
+        row.append(_adopt(self._play))
+        row.append(_adopt(self._gear))
         return row
 
     def _error_row(self, game, problem, error):
@@ -162,7 +177,12 @@ class Detail(Gtk.ScrolledWindow):
                 (_('Added'), formatting.added(game.added)))):
             grid.attach(self._figure(caption, label(value, 'figure')),
                         column, 0, 1, 1)
-        grid.attach(self._figure(_('Status'), self._status_menu(game)),
+        self._status_dot.set_css_classes(['dot', f'status-{game.status}'])
+        self._status_text.set_label(status_label(game.status))
+        # Its menu may still be on its way out when a status chosen in it
+        # redraws the column; closed first, it moves cleanly.
+        self._status_menu.popdown()
+        grid.attach(self._figure(_('Status'), _adopt(self._status_menu)),
                     3, 0, 1, 1)
         return grid
 
@@ -172,15 +192,18 @@ class Detail(Gtk.ScrolledWindow):
         box.append(value)
         return box
 
-    def _status_menu(self, game):
-        '''Looks like the other figures; is a menu.'''
+    def _build_status_menu(self):
+        '''Looks like the other figures; is a menu. Its face is filled in
+        by _figures().'''
         menu = Gio.Menu()
         for status in STATUSES:
             menu.append(status_label(status), f'win.status::{status}')
 
         face = Gtk.Box(spacing=10)
-        face.append(dot(game.status, size=10))
-        face.append(label(status_label(game.status), 'figure'))
+        self._status_dot = dot('new', size=10)
+        self._status_text = label('', 'figure')
+        face.append(self._status_dot)
+        face.append(self._status_text)
         arrow = Gtk.Image(icon_name='pan-down-symbolic', pixel_size=14)
         arrow.add_css_class('dim')
         face.append(arrow)
@@ -202,3 +225,12 @@ class Detail(Gtk.ScrolledWindow):
             # An empty second column keeps a single image at half width.
             grid.attach(Gtk.Box(hexpand=True), 1, 0, 1, 1)
         return grid
+
+
+def _adopt(widget):
+    '''`widget`, taken out of the drawing it was last in, so it can go into
+    the new one.'''
+    parent = widget.get_parent()
+    if parent is not None:
+        parent.remove(widget)
+    return widget

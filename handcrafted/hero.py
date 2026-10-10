@@ -6,20 +6,19 @@ recently as tiles. Without a cover there is nothing behind it but the
 window's own background -- no stripes, no letter.
 '''
 
+from datetime import date
+
 import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
-from . import formatting, images, launch  # noqa: E402
+from . import formatting, images, launch, thumbs  # noqa: E402
 from .i18n import _  # noqa: E402
 from .widgets import (Cover, PlayButton, Ratio, label,  # noqa: E402
                       play_mode, problem_text)
 
-# The width the cover is loaded at, doubled by thumbs.py: 2560, as wide as
-# the widest screen it will be shown on.
-BACKGROUND_WIDTH = 1280
 INFO_WIDTH = 680
 BODY_WIDTH = 540
 BODY_LINES = 4
@@ -64,18 +63,30 @@ class Hero(Gtk.Box):
         self._on_details = on_details
         self._on_choose = on_choose
         self._layers = []
+        self._drawn = None  # what it was last drawn from
 
     def show(self, game, tiles, running, error=None):
         '''Draw `game` (a library.Game) over `tiles`, the games played most
         recently. `running` is the id of the game that runs, or None;
-        `error` why the last attempt to start `game` failed, if it did.'''
+        `error` why the last attempt to start `game` failed, if it did.
+
+        Does nothing if all of that, its cover and the state of its
+        executable are what it was last drawn from.'''
+        cover = images.cover(game.id)
+        problem = launch.check(game.executable)
+        drawn = (game, tuple(tiles), running, error, problem, date.today(),
+                 images.stamp([cover] + [images.cover(tile.id)
+                                         for tile in tiles]))
+        if drawn == self._drawn:
+            return
+        self._drawn = drawn
+
         for layer in self._layers:
             self.remove(layer)
         self._layers = []
 
-        cover = images.cover(game.id)
         if cover is not None:
-            self._add(Cover(cover, game.name, BACKGROUND_WIDTH))
+            self._add(Cover(cover, game.name, thumbs.LARGE))
             for veil in ('hero-veil-across', 'hero-veil-up'):
                 box = Gtk.Box()
                 box.add_css_class(veil)
@@ -83,7 +94,7 @@ class Hero(Gtk.Box):
 
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
                          valign=Gtk.Align.END)
-        column.append(self._info(game, running, error))
+        column.append(self._info(game, running, error, problem))
         column.append(self._tiles(game, tiles, running))
         # Last, so it is on top -- and the one that decides the size: the
         # cover's own would only make the window as large as the image.
@@ -95,7 +106,7 @@ class Hero(Gtk.Box):
 
     # -- parts -------------------------------------------------------------
 
-    def _info(self, game, running, error):
+    def _info(self, game, running, error, problem):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         box.add_css_class('hero-info')
 
@@ -113,7 +124,6 @@ class Hero(Gtk.Box):
             body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
             box.append(_clamped(body, BODY_WIDTH))
 
-        problem = launch.check(game.executable)
         if problem or error:
             box.append(label(problem_text(problem, error), 'danger'))
 

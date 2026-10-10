@@ -8,6 +8,7 @@ Free of GTK.
 '''
 
 import shutil
+import time
 from pathlib import Path
 
 from . import config
@@ -35,19 +36,71 @@ def _recover(game_id):
         shutil.rmtree(retired, ignore_errors=True)
 
 
+# str(folder) -> ((inode, mtime), [Path, ...]). A folder's mtime changes
+# whenever a file in it is added, removed or renamed, and replace() swaps in
+# a new folder altogether, so one stat tells whether a listing still holds.
+_listings = {}
+
+# Counts every replace() and remove(). After a replace the files may have
+# the very same names with other pictures in them; views compare this to
+# know they have to draw again.
+generation = 0
+
+
 def listing(game_id):
     '''The images in order. Only files named by a number count, sorted as
-    numbers so 10.jpg comes after 9.jpg.'''
+    numbers so 10.jpg comes after 9.jpg.
+
+    Asked for every game in the rail on every redraw, so it is kept: as
+    long as the folder is unchanged, one stat instead of reading it.'''
+    target = folder(game_id)
+    key = str(target)
+    try:
+        info = target.stat()
+    except OSError:
+        info = None
+    if info is not None:
+        stamp = (info.st_ino, info.st_mtime_ns)
+        cached = _listings.get(key)
+        if cached is not None and cached[0] == stamp:
+            return list(cached[1])
+
+    # Not known, or changed: only now look for what a crash left behind.
     _recover(game_id)
     try:
-        entries = list(folder(game_id).iterdir())
+        info = target.stat()
+        entries = list(target.iterdir())
     except OSError:
+        _listings.pop(key, None)
         return []
     numbered = [path for path in entries
                 # isdigit() alone also takes '²', which int() cannot read.
                 if path.is_file() and path.stem.isascii()
                 and path.stem.isdigit()]
-    return sorted(numbered, key=lambda path: int(path.stem))
+    numbered.sort(key=lambda path: int(path.stem))
+    # Not kept while the folder is fresh: its mtime only moves in coarse
+    # ticks, and a file added within the same tick would go unseen. (Git
+    # does the same with what it calls racily clean entries.)
+    if time.time_ns() - info.st_mtime_ns > 2_000_000_000:
+        _listings[key] = ((info.st_ino, info.st_mtime_ns), numbered)
+    else:
+        _listings.pop(key, None)
+    return list(numbered)
+
+
+def stamp(paths):
+    '''What a view drew from `paths` (image files, or None for none), in a
+    form it can compare with next time: each file with its mtime, so a
+    picture saved over another under the same name counts as a change, and
+    the generation, so one replaced within the same clock tick does too.'''
+    stamped = []
+    for path in paths:
+        try:
+            mtime = path.stat().st_mtime_ns if path is not None else None
+        except OSError:
+            mtime = None
+        stamped.append((path, mtime))
+    return generation, tuple(stamped)
 
 
 def cover(game_id):
@@ -66,6 +119,8 @@ def replace(game_id, sources):
     Built in a neighbouring folder and swapped in by renaming, so a run that
     dies halfway leaves either the old set or the new one, never a mixture.
     '''
+    global generation
+    generation += 1
     sources = [Path(source) for source in sources]
     target = folder(game_id)
     staging = target.with_name(f'.{game_id}.new')
@@ -100,6 +155,8 @@ def remove(game_id):
     Including what an interrupted replace() may have left beside them: ids
     are never handed out again, so nothing else would ever clear it.
     '''
+    global generation
+    generation += 1
     target = folder(game_id)
     for path in (target, target.with_name(f'.{game_id}.new'),
                  target.with_name(f'.{game_id}.old')):

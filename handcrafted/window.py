@@ -18,6 +18,7 @@ from .hero import Hero  # noqa: E402
 from .dialog import GameDialog  # noqa: E402
 from .i18n import _  # noqa: E402
 from .launch import LaunchError  # noqa: E402
+from .library import recent  # noqa: E402
 from .rail import Rail  # noqa: E402
 
 
@@ -40,6 +41,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self._dialog = None     # the GameDialog while it is open
         self._dialog_game = None  # the id it edits; None when adding
         self._dialog_folder = None  # where its downloads wait until Save
+        self._hero_drawing = None  # what the hero shows once it is in view
 
         self._state = state.load()
         self.set_default_size(self._state['width'], self._state['height'])
@@ -54,7 +56,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self._status.connect('change-state', self._on_status)
         self.add_action(self._status)
 
-        self._rail = Rail(library, on_select=self.select,
+        self._rail = Rail(on_select=self.select,
                           on_add=lambda: self.open_editor(None),
                           on_hero=self.show_hero)
         self._detail = Detail(
@@ -119,6 +121,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
 
     def show_hero(self):
         if self._hero is not None:
+            self._draw_hero()
             self._pages.set_visible_child_name('hero')
 
     def show_library(self):
@@ -130,21 +133,24 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         return self._pages.get_visible_child_name()
 
     def refresh(self):
-        '''Draw everything again from the library. Cheap enough for a
-        hand-kept collection, and never out of step.'''
-        if self._selected is not None and not self._library.get(
-                self._selected):
-            self._selected = self._most_recent()
+        '''Bring every view in line with the library. One read of it, and
+        each view draws again only what changed: the rail moves its mark
+        when only the selection did, the detail column and the hero do
+        nothing when their game is as they last drew it, and the hero,
+        while out of view, not even that.'''
+        games = self._library.games()
+        by_id = {game.id: game for game in games}
+        if self._selected not in by_id:
+            self._selected = games[0].id if games else None
         running = self._launcher.running_game
         if running is None and self._asking is not None:
             # The game ended while the question was up: nothing left to warn
             # about.
             self._asking.cancel()
-        game = (self._library.get(self._selected)
-                if self._selected is not None else None)
+        game = by_id.get(self._selected)
         if game is not None:
             self._status.set_state(GLib.Variant('s', game.status))
-        tiles = self._library.recent()
+        tiles = recent(games)
         if not any(tile.id == self._hero for tile in tiles):
             # Never chosen, or no longer among the last four: the one played
             # last. Nothing played at all: no hero.
@@ -152,16 +158,22 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         if self._hero is None and self.page == 'hero':
             self._pages.set_visible_child_name('library')
 
-        self._rail.refresh(self._selected, running,
+        self._rail.refresh(games, self._selected, running,
                            has_hero=self._hero is not None)
         self._detail.show(game, running, self._error_for(self._selected))
+        self._hero_drawing = None
         if self._hero is not None:
-            hero = next(tile for tile in tiles if tile.id == self._hero)
-            self._hero_page.show(hero, tiles, running,
-                                 self._error_for(self._hero))
+            self._hero_drawing = (by_id[self._hero], tiles, running,
+                                  self._error_for(self._hero))
+            if self.page == 'hero':
+                self._draw_hero()
         if self._dialog is not None:
             self._dialog.set_running(
                 running is not None and running == self._dialog_game)
+
+    def _draw_hero(self):
+        if self._hero_drawing is not None:
+            self._hero_page.show(*self._hero_drawing)
 
     def _error_for(self, game_id):
         if self._error is not None and self._error[0] == game_id:
@@ -287,8 +299,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self._library.delete(game_id)
         images.remove(game_id)
         self.close_editor()
-        self._selected = self._most_recent()
-        self.refresh()
+        self.refresh()  # which selects another game, the one gone missing
 
     # -- closing -----------------------------------------------------------
 

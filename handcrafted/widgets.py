@@ -209,5 +209,8 @@ class PlayButton(Gtk.Button):
         self._shape.set_css_classes(['square' if running else 'triangle'])
         self._text.set_label(_('Running · Stop') if running else _('Play'))
         self.set_sensitive(mode in ('play', 'running'))
-        self.set_tooltip_text(_('Another game is running')
-                              if mode == 'blocked' else None)
+        tooltip = _('Another game is running') if mode == 'blocked' else None
+        if tooltip != self.get_tooltip_text():
+            # Only when it changes: setting one costs more than the rest of
+            # this together.
+            self.set_tooltip_text(tooltip)

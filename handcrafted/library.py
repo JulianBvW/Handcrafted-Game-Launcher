@@ -115,30 +115,6 @@ class Library:
         return [Game(**row)
                 for row in self._db.execute(f'SELECT * FROM games {ORDER}')]
 
-    def grouped(self, only_playing=False):
-        '''[(status, [Game, ...]), ...] in the order New, Playing, Done,
-        Abandoned. Empty groups are left out; with only_playing, so is every
-        group but Playing.'''
-        groups = {status: [] for status in STATUSES}
-        for game in self.games():
-            groups[game.status].append(game)
-        return [(status, games) for status, games in groups.items()
-                if games and (not only_playing or status == 'playing')]
-
-    def recent(self, limit=4):
-        '''The games played most recently. Never-played ones are left out.'''
-        rows = self._db.execute(
-            'SELECT * FROM games WHERE last_played IS NOT NULL '
-            'ORDER BY last_played DESC, id DESC LIMIT ?', (limit,))
-        return [Game(**row) for row in rows]
-
-    def totals(self):
-        '''(number of games, total playtime in seconds)'''
-        count, seconds = self._db.execute(
-            'SELECT COUNT(*), COALESCE(SUM(playtime), 0) FROM games'
-        ).fetchone()
-        return count, seconds
-
     # -- editing -----------------------------------------------------------
 
     def add(self, name, description='', executable='', version='',
@@ -262,3 +238,30 @@ def _text(value, strip=True):
     if not isinstance(value, str):
         raise ValueError(f'expected text, got {type(value).__name__}')
     return value.strip() if strip else value
+
+
+# -- views of a list of games ------------------------------------------------
+# Worked out from one games() rather than asked of the database each: the
+# window draws the rail, the detail column and the hero from a single read.
+
+def grouped(games, only_playing=False):
+    '''[(status, [Game, ...]), ...] in the order New, Playing, Done,
+    Abandoned, each group in the order of `games`. Empty groups are left
+    out; with only_playing, so is every group but Playing.'''
+    groups = {status: [] for status in STATUSES}
+    for game in games:
+        groups[game.status].append(game)
+    return [(status, members) for status, members in groups.items()
+            if members and (not only_playing or status == 'playing')]
+
+
+def recent(games, limit=4):
+    '''The games played most recently. Never-played ones are left out.'''
+    played = [game for game in games if game.last_played is not None]
+    played.sort(key=lambda game: (game.last_played, game.id), reverse=True)
+    return played[:limit]
+
+
+def totals(games):
+    '''(number of games, total playtime in seconds)'''
+    return len(games), sum(game.playtime for game in games)

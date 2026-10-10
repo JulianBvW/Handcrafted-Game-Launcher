@@ -341,11 +341,12 @@ window.handcrafted .switch button:checked .dot.accent {
 }
 
 /* -- detail ------------------------------------------------------------ */
-.backdrop .cover {
-    opacity: 0.3;
-    filter: saturate(0.6);
-}
+/* The cover dimmed by a layer of the background over it rather than by
+   opacity and a filter: those send the whole picture through an extra pass
+   on every frame the column scrolls. 70 % of @bg over it is what
+   opacity .3 on @bg was. */
 .backdrop-veil {
+    background-color: rgba(11, 11, 12, 0.7);
     background-image: linear-gradient(180deg,
         rgba(11, 11, 12, 0.25) 0%,
         rgba(11, 11, 12, 0.7) 50%,

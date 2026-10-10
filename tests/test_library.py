@@ -8,7 +8,7 @@ import sqlite3
 from harness import check, report, sandbox, section
 
 from handcrafted import config
-from handcrafted.library import Library
+from handcrafted.library import Library, grouped, recent, totals
 
 folder = sandbox()
 DAY = 86400
@@ -31,7 +31,7 @@ check('the file lands under data_dir', config.LIBRARY_FILE.exists(),
 version = library._db.execute('PRAGMA user_version').fetchone()[0]
 check('schema version is 1', version == 1, version)
 check('an empty library has no games', library.games() == [])
-check('and totals of nothing', library.totals() == (0, 0))
+check('and totals of nothing', totals(library.games()) == (0, 0))
 
 section('Adding')
 
@@ -156,21 +156,21 @@ for game_id, when in ((c, T0 + 2 * DAY), (d, T0 + 9 * DAY)):
 library.set_status(e, 'abandoned')
 
 groups = [(status, [g.name for g in games])
-          for status, games in library.grouped()]
+          for status, games in grouped(library.games())]
 check('grouped in the order new, playing, abandoned; done is empty',
       groups == [('new', ['B', 'A']), ('playing', ['D', 'C']),
                  ('abandoned', ['E'])], groups)
 
 groups = [(status, [g.name for g in games])
-          for status, games in library.grouped(only_playing=True)]
+          for status, games in grouped(library.games(), only_playing=True)]
 check('only playing', groups == [('playing', ['D', 'C'])], groups)
 
 check('recent leaves out the never played',
-      [g.name for g in library.recent()] == ['D', 'C'])
+      [g.name for g in recent(library.games())] == ['D', 'C'])
 check('recent respects the limit',
-      [g.name for g in library.recent(limit=1)] == ['D'])
+      [g.name for g in recent(library.games(), limit=1)] == ['D'])
 check('totals count every game and sum their time',
-      library.totals() == (5, 1200), library.totals())
+      totals(library.games()) == (5, 1200), totals(library.games()))
 
 section('Deleting')
 

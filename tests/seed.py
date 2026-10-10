@@ -28,7 +28,7 @@ gi.require_version('GdkPixbuf', '2.0')
 from gi.repository import GdkPixbuf  # noqa: E402
 
 from handcrafted import config, images  # noqa: E402
-from handcrafted.library import Library  # noqa: E402
+from handcrafted.library import Library, totals  # noqa: E402
 
 DAY = 86400
 NOW = int(time.time())
@@ -115,7 +115,7 @@ def main(argv):
         real = Path(argv[argv.index('--with') + 1]).expanduser().resolve()
         library.add(real.stem.replace('_', ' '), 'A real game.', str(real))
 
-    count, seconds = library.totals()
+    count, seconds = totals(library.games())
     print(f'{count} games, {seconds // 3600}h played, '
           f'in {config.DATA_DIR}')
     library.close()

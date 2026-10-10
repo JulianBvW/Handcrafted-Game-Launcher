@@ -3,6 +3,9 @@
     /usr/bin/python3 tests/test_images.py
 '''
 
+import os
+import time
+
 from harness import check, report, sandbox, section
 
 from handcrafted import config, images
@@ -90,6 +93,35 @@ check('and the retired one cleared',
 images.folder(3).rename(config.IMAGES_DIR / '.3.old')
 check('the retired set comes back if nothing replaced it',
       contents(3) == [b'NEW'], contents(3))
+
+section('Kept listings')
+
+images.replace(5, [made('k1.png', b'K1'), made('k2.png', b'K2')])
+check('a folder changed just now is not kept: its mtime is too coarse',
+      str(images.folder(5)) not in images._listings)
+# As if it had been written a minute ago.
+a_minute_ago = time.time_ns() - 60_000_000_000
+os.utime(images.folder(5), ns=(a_minute_ago, a_minute_ago))
+first = images.listing(5)
+check('an older one is', str(images.folder(5)) in images._listings)
+second = images.listing(5)
+check('asked again, the same answer', first == second)
+second.clear()
+check('and handing it out does not let it be changed',
+      len(images.listing(5)) == 2)
+(images.folder(5) / '3.png').write_bytes(b'K3')
+check('a file added by hand is still seen', names(5) == ['1.png', '2.png',
+                                                         '3.png'], names(5))
+(images.folder(5) / '3.png').unlink()
+check('and one taken away', names(5) == ['1.png', '2.png'], names(5))
+before = images.generation
+images.replace(5, [made('k3.png', b'K3')])
+check('a replace is counted, so views know to draw again',
+      images.generation == before + 1)
+check('and listed anew', contents(5) == [b'K3'], contents(5))
+images.remove(5)
+check('so is a remove', images.generation == before + 2)
+check('after which nothing is listed', images.listing(5) == [])
 
 section('Removing')
 

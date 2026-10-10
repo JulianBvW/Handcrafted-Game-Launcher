@@ -195,6 +195,64 @@ window.select(alpha)
 window._on_play(alpha)
 check('Play on the running game stops it', launcher.running_game is None)
 
+section('Drawing only what changed')
+
+
+def rows():
+    '''The rail's rows, as the widgets they are.'''
+    found = []
+    child = rail._list.get_first_child()
+    while child is not None:
+        found.append(child)
+        child = child.get_next_sibling()
+    return found
+
+
+before, drawing = rows(), detail.get_child()
+window.refresh()
+check('a redraw with nothing changed builds nothing new',
+      rows() == before and detail.get_child() is drawing)
+window.select(beta)
+check('a new selection keeps the rail as it is',
+      rows() == before)
+check('and only moves the mark',
+      [r for r in rows() if r.has_css_class('selected')]
+      == [rail._rows[beta]])
+check('while the detail column draws the new game',
+      detail.get_child() is not drawing and 'The Beta' in texts(detail))
+play = find(detail, Gtk.Button)
+window.select(alpha)
+check('its Play button is kept, not built again',
+      find(detail, Gtk.Button) is play)
+library.update(beta, name='The Beta Redux')
+window.refresh()
+check('a changed game builds the rail again',
+      rows() != before and 'The Beta Redux' in texts(rail))
+library.update(beta, name='The Beta')
+window.refresh()
+before = rows()
+images.replace(beta, [folder / 'games' / 'alpha' / 'run.sh'])
+window.refresh()
+check('and so do changed images, though the game is the same',
+      rows() != before)
+window.select(beta)
+drawing = detail.get_child()
+cover = images.cover(beta)
+os.utime(cover, ns=(1, 1))  # as if saved over by hand, same name
+window.refresh()
+check('a picture saved over another under the same name is drawn again',
+      detail.get_child() is not drawing)
+images.remove(beta)
+window.refresh()
+before = rows()
+(images.folder(beta)).mkdir(parents=True)
+(images.folder(beta) / '1.png').write_bytes(b'by hand')
+window.refresh()
+check('a cover put into the folder by hand reaches the rail',
+      rows() != before)
+images.remove(beta)
+window.refresh()
+
 section('Now playing')
 
 rail._playing.set_active(True)

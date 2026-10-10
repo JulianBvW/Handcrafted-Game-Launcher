@@ -20,7 +20,7 @@ from gi.repository import Adw, Gtk  # noqa: E402
 
 from handcrafted import images, state  # noqa: E402
 from handcrafted.launch import LaunchError  # noqa: E402
-from handcrafted.library import Library  # noqa: E402
+from handcrafted.library import Library, recent  # noqa: E402
 from handcrafted.widgets import Cover  # noqa: E402
 from handcrafted.window import HandcraftedWindow  # noqa: E402
 
@@ -194,6 +194,29 @@ launcher.stop()
 check('afterwards Play is back', play_label(window)[1] == 'Play'
       and play_label(window)[0].get_sensitive())
 
+section('Drawing only what changed')
+
+window.show_library()
+layers = list(window._hero_page._layers)
+window.select(ids['Moth'])
+launcher.launch(ids['Moth'])
+launcher.stop()
+check('out of view, the hero is not drawn again',
+      window._hero_page._layers == layers)
+window.show_hero()
+check('until it comes into view, up to date',
+      window._hero_page._layers != layers
+      and tile_ids(window)[0] == ids['Moth'])
+layers = list(window._hero_page._layers)
+window.refresh()
+check('in view, a redraw with nothing changed builds nothing',
+      window._hero_page._layers == layers)
+drawing = window._detail.get_child()
+tile(window, ids['Lamp']).emit('clicked')
+check('a tile redraws the hero and leaves the detail column alone',
+      window._detail.get_child() is drawing)
+tile(window, ids['Kettle']).emit('clicked')
+
 section('When Play fails')
 
 launcher.refuse = {ids['Kettle']: 'Permission denied'}
@@ -236,10 +259,10 @@ section('Deleting')
 
 library.delete(ids['Kettle'])
 window.refresh()
-check('the next game moves up as the hero', window._hero == ids['Lamp'])
+check('the next game moves up as the hero', window._hero == ids['Moth'])
 check('and the fifth-last played is a tile now',
       ids['Leaf'] in tile_ids(window))
-for game in library.recent(limit=100):
+for game in recent(library.games(), limit=100):
     library.delete(game.id)
 window.refresh()
 check('once nothing played is left, there is no hero', window._hero is None)
