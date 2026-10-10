@@ -239,6 +239,19 @@ dialog._links.get_buffer().set_text(
     f'{BASE}/cover.png\n\n{BASE}/missing.png\nnot a link\n'
     f'{BASE}/photo.jpg\n')
 check('a link frees it', dialog._load.get_sensitive())
+buffer = dialog._links.get_buffer()
+buffer.set_text('')
+buffer.insert_at_cursor('https://one.example/a.png')
+dialog._after_paste(buffer, None)
+check('after pasting a link the cursor is on the next line',
+      dialog._link_text() == 'https://one.example/a.png\n',
+      repr(dialog._link_text()))
+buffer.insert_at_cursor('https://two.example/b.png\n')
+dialog._after_paste(buffer, None)
+check('a paste that ends in a newline gets no second one',
+      dialog._link_text().endswith('b.png\n'), repr(dialog._link_text()))
+buffer.set_text(f'{BASE}/cover.png\n\n{BASE}/missing.png\nnot a link\n'
+                f'{BASE}/photo.jpg\n')
 seen = set()
 dialog._load.connect('notify::label',
                      lambda button, _: seen.add(button.get_label()))

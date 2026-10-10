@@ -181,6 +181,7 @@ class GameDialog(Gtk.Box):
         self._links.add_css_class('links-field')
         buffer = self._links.get_buffer()
         buffer.connect('changed', lambda *_: self._update_load())
+        buffer.connect('paste-done', self._after_paste)
 
         frame = Gtk.ScrolledWindow(propagate_natural_height=False)
         frame.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -275,6 +276,17 @@ class GameDialog(Gtk.Box):
         buffer = self._links.get_buffer()
         return buffer.get_text(buffer.get_start_iter(),
                                buffer.get_end_iter(), False)
+
+    def _after_paste(self, buffer, _clipboard):
+        '''One link pasted, and the cursor is already on the next line,
+        ready for the next one.'''
+        cursor = buffer.get_iter_at_mark(buffer.get_insert())
+        if not cursor.ends_line():
+            return  # pasted into the middle of a line
+        start = cursor.copy()
+        start.set_line_offset(0)
+        if buffer.get_text(start, cursor, False).strip():
+            buffer.insert_at_cursor('\n')
 
     def _update_load(self):
         text = self._link_text()
