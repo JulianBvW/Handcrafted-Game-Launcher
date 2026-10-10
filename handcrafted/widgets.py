@@ -1,4 +1,4 @@
-'''Small pieces the rail, the detail column and later the hero share.'''
+'''Small pieces the rail, the detail column and the hero share.'''
 
 import gi
 
@@ -13,6 +13,19 @@ def status_label(status):
     '''The status as shown. The database keeps the English key.'''
     return {'new': _('New'), 'playing': _('Playing'), 'done': _('Done'),
             'abandoned': _('Abandoned')}[status]
+
+
+def problem_text(problem, error):
+    '''Why a game cannot start, as the detail column and the hero say it.
+    `problem` is what launch.check() found, `error` why the last start
+    failed; one of them is set.'''
+    if problem == 'not executable':
+        return _('Executable is not marked as runnable')
+    if problem:
+        return _('Executable not found')
+    # It looked fine, and still would not start: say what the system said
+    # rather than nothing at all.
+    return _('Could not start: {reason}').format(reason=error)
 
 
 def initial(name):
@@ -156,6 +169,16 @@ def dot(status=None, size=8, accent=False):
     widget.add_css_class('dot')
     widget.add_css_class('accent' if accent else f'status-{status}')
     return widget
+
+
+def play_mode(game_id, problem, running):
+    '''What a game's Play button shows: `problem` from launch.check(),
+    `running` the id of the game that runs or None.'''
+    if problem:
+        return 'broken'
+    if running is None:
+        return 'play'
+    return 'running' if running == game_id else 'blocked'
 
 
 class PlayButton(Gtk.Button):

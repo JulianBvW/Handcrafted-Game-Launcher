@@ -19,10 +19,11 @@ THUMB_HEIGHT = 59  # 104 at 16:9
 
 
 class Rail(Gtk.Box):
-    '''Calls on_select(game_id) when a game is clicked. The window decides
-    what is selected and tells the rail through refresh().'''
+    '''Calls on_select(game_id) when a game is clicked and on_hero() for
+    the way back up. The window decides what is selected and tells the rail
+    through refresh().'''
 
-    def __init__(self, library, on_select, on_add):
+    def __init__(self, library, on_select, on_add, on_hero):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.add_css_class('rail')
         self.set_size_request(WIDTH, -1)
@@ -33,10 +34,19 @@ class Rail(Gtk.Box):
         self._only_playing = False
         self._selected = None
         self._running = None
+        self._has_hero = False
 
         head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         head.add_css_class('rail-head')
         self.append(head)
+
+        # Back to the hero; there only while there is one (DESIGN §13,
+        # fallback).
+        self._to_hero = Gtk.Button(label=_('↑ Hero'), halign=Gtk.Align.START,
+                                   visible=False)
+        self._to_hero.add_css_class('back-button')
+        self._to_hero.connect('clicked', lambda *_: on_hero())
+        head.append(self._to_hero)
 
         title_row = Gtk.Box(spacing=10)
         # Both on the baseline, so the small totals sit on the same line as
@@ -81,8 +91,10 @@ class Rail(Gtk.Box):
 
     # -- drawing -----------------------------------------------------------
 
-    def refresh(self, selected, running):
+    def refresh(self, selected, running, has_hero=False):
         self._selected = selected
+        self._has_hero = has_hero
+        self._to_hero.set_visible(has_hero)
         self._running = running
 
         count, seconds = self._library.totals()
@@ -158,4 +170,4 @@ class Rail(Gtk.Box):
 
     def _on_switch(self, button):
         self._only_playing = button.get_active()
-        self.refresh(self._selected, self._running)
+        self.refresh(self._selected, self._running, self._has_hero)

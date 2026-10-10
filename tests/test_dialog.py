@@ -157,9 +157,9 @@ section('While the dialog is open')
 
 window.open_editor(kettle)
 check('the library behind it takes no focus',
-      not window._body.get_can_focus())
+      not window._pages.get_can_focus())
 window._dialog._on_cancel()
-check('and gets it back afterwards', window._body.get_can_focus())
+check('and gets it back afterwards', window._pages.get_can_focus())
 window.open_editor(9999)
 check('a game that is gone opens nothing, least of all "New game"',
       window._dialog is None)

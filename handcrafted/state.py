@@ -1,5 +1,5 @@
-'''What the window remembers between sessions: how big it was, and which
-game was selected.
+'''What the window remembers between sessions: how big it was, which game
+was selected and which one was the hero.
 
 Only the size and whether it was maximized, not the place. GTK 4 can
 neither read nor set a window's position on X11, so where the window opens
@@ -16,7 +16,7 @@ from . import config
 def defaults():
     '''The window as it opens before it has ever been resized.'''
     return {'width': config.WIDTH, 'height': config.HEIGHT,
-            'maximized': False, 'selected': None}
+            'maximized': False, 'selected': None, 'hero': None}
 
 
 def load():
@@ -43,10 +43,11 @@ def load():
     if isinstance(stored.get('maximized'), bool):
         state['maximized'] = stored['maximized']
 
-    # A game id. Whether that game still exists is the window's question.
-    selected = stored.get('selected')
-    if isinstance(selected, int) and not isinstance(selected, bool):
-        state['selected'] = selected
+    # Game ids. Whether those games still exist is the window's question.
+    for key in ('selected', 'hero'):
+        value = stored.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            state[key] = value
 
     state['width'] = max(config.MIN_WIDTH, state['width'])
     state['height'] = max(config.MIN_HEIGHT, state['height'])

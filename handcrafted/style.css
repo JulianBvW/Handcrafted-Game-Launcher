@@ -160,6 +160,17 @@ window.handcrafted button.play.large.running {
     font-size: 16px;
     font-weight: 600;
 }
+window.handcrafted button.play.medium {
+    min-height: 54px;
+    padding: 0 30px 0 24px;
+    font-size: 18px;
+    font-weight: 700;
+}
+window.handcrafted button.play.medium.running {
+    padding: 0 26px;
+    font-size: 16px;
+    font-weight: 600;
+}
 /* A triangle out of borders: 12 wide, 16 high. */
 button.play .triangle {
     min-width: 0;
@@ -215,6 +226,20 @@ window.handcrafted button.quiet-button:hover {
     color: @text;
 }
 
+/* Details in the hero: outlined, the height of Play. */
+window.handcrafted button.outline-button {
+    min-height: 52px;
+    padding: 0 24px;
+    border-radius: 999px;
+    border: 1px solid @stroke;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 120ms ease-out;
+}
+window.handcrafted button.outline-button:hover {
+    background-color: @fill_hover;
+}
+
 /* -- rail -------------------------------------------------------------- */
 .rail {
     background-color: @bg_rail;
@@ -227,6 +252,13 @@ window.handcrafted button.quiet-button:hover {
     font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.78px;
+}
+window.handcrafted button.back-button {
+    font-size: 13px;
+    color: @text_3;
+}
+window.handcrafted button.back-button:hover {
+    color: @text;
 }
 .rail-head .meta-muted {
     font-family: monospace;
@@ -362,6 +394,83 @@ window.handcrafted button.status-menu:hover .figure {
 }
 .gallery-image .cover {
     border-radius: 12px;
+}
+
+/* -- hero -------------------------------------------------------------- */
+/* Across: dark on the left where the text stands, clear from three
+   quarters on. Up: the bottom runs fully into the window's background. */
+.hero-veil-across {
+    background-image: linear-gradient(90deg,
+        rgba(11, 11, 12, 0.92) 0%,
+        rgba(11, 11, 12, 0.55) 45%,
+        rgba(11, 11, 12, 0) 75%);
+}
+.hero-veil-up {
+    background-image: linear-gradient(0deg,
+        @bg 0%,
+        rgba(11, 11, 12, 0.85) 30%,
+        rgba(11, 11, 12, 0) 62%);
+}
+.hero-info {
+    padding: 40px 40px 28px 40px;
+}
+.hero-title {
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -2.24px;
+    line-height: 0.95;
+}
+.hero-body {
+    font-size: 17px;
+    line-height: 1.5;
+    color: @text_2;
+}
+.hero-buttons {
+    margin-top: 6px;
+}
+.hero-stats {
+    margin-left: 16px;
+}
+.hero-stat-label {
+    font-size: 13px;
+    color: @text_muted;
+}
+.hero-stat-value {
+    font-size: 16px;
+    font-weight: 600;
+}
+.hero-tiles {
+    padding: 14px 40px 30px 40px;
+}
+window.handcrafted button.hero-tile .cover {
+    border-radius: 10px;
+    opacity: 0.7;
+    transition: opacity 120ms ease-out;
+}
+window.handcrafted button.hero-tile:hover .cover,
+window.handcrafted button.hero-tile.current .cover {
+    opacity: 1;
+}
+window.handcrafted button.hero-tile.current .cover {
+    outline: 3px solid @accent;
+    outline-offset: 3px;
+}
+.tile-name {
+    font-size: 14px;
+    color: @text_3;
+}
+.hero-tile.current .tile-name {
+    font-weight: 600;
+    color: @text;
+}
+.running-badge {
+    background-color: @accent;
+    color: @on_accent;
+    border-radius: 999px;
+    padding: 3px 8px;
+    margin: 8px;
+    font-size: 10px;
+    font-weight: 700;
 }
 
 /* -- scrollbars -------------------------------------------------------- */

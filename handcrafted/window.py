@@ -1,7 +1,10 @@
-'''The main window: for now the library, rail and detail side by side,
-and the dialog laid over them when a game is added or edited.
+'''The main window: the hero on top, the library -- rail and detail side by
+side -- below it, and the dialog laid over both when a game is added or
+edited.
 
-The hero above it arrives in phase 7.
+There is a hero only once something has been played; until then the window
+is the library alone. Moving between the two by scrolling comes in phase 8;
+for now Details goes down and the rail's "↑ Hero" back up.
 '''
 
 import gi
@@ -11,6 +14,7 @@ from gi.repository import Gio, GLib, Gtk  # noqa: E402
 
 from . import config, download, images, state  # noqa: E402
 from .detail import Detail  # noqa: E402
+from .hero import Hero  # noqa: E402
 from .dialog import GameDialog  # noqa: E402
 from .i18n import _  # noqa: E402
 from .launch import LaunchError  # noqa: E402
@@ -51,26 +55,42 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self.add_action(self._status)
 
         self._rail = Rail(library, on_select=self.select,
-                          on_add=lambda: self.open_editor(None))
+                          on_add=lambda: self.open_editor(None),
+                          on_hero=self.show_hero)
         self._detail = Detail(
             on_play=self._on_play,
             on_edit=self.open_editor,
             on_fix_path=lambda game_id: self.open_editor(
                 game_id, focus='executable'))
-        self._body = body = Gtk.Box()
+        body = Gtk.Box()
         body.append(self._rail)
         body.append(self._detail)
+        self._hero_page = Hero(on_play=self._on_play,
+                               on_details=self._on_details,
+                               on_choose=self.choose_hero)
+        # Hero first: SLIDE_UP_DOWN goes by the order of the pages, so the
+        # library comes up from below.
+        self._pages = Gtk.Stack(
+            transition_type=Gtk.StackTransitionType.SLIDE_UP_DOWN,
+            transition_duration=450)
+        self._pages.add_named(self._hero_page, 'hero')
+        self._pages.add_named(body, 'library')
         # The dialog is not a window of its own: Adw.Dialog only stays inside
         # an Adw window, and this one is a plain GTK window for the sake of
-        # the desktop's title bar. So it is laid over the body instead.
+        # the desktop's title bar. So it is laid over the pages instead.
         self._overlay = Gtk.Overlay()
-        self._overlay.set_child(body)
+        self._overlay.set_child(self._pages)
         self.set_child(self._overlay)
 
         self._selected = self._first_selection()
+        self._hero = self._state['hero']  # checked against recent() below
         launcher.connect(self.refresh)
         self.connect('close-request', self._on_close_request)
         self.refresh()
+        # Opens on the hero if there is one; no slide on the way in.
+        self._pages.set_visible_child_full(
+            'hero' if self._hero is not None else 'library',
+            Gtk.StackTransitionType.NONE)
 
     # -- selection and drawing ---------------------------------------------
 
@@ -91,6 +111,24 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self._error = None
         self.refresh()
 
+    def choose_hero(self, game_id):
+        '''A tile was clicked: that game is the hero now, and nothing else
+        changes -- not even an error shown for another game.'''
+        self._hero = game_id
+        self.refresh()
+
+    def show_hero(self):
+        if self._hero is not None:
+            self._pages.set_visible_child_name('hero')
+
+    def show_library(self):
+        self._pages.set_visible_child_name('library')
+
+    @property
+    def page(self):
+        '''`hero` or `library`, whichever is shown.'''
+        return self._pages.get_visible_child_name()
+
     def refresh(self):
         '''Draw everything again from the library. Cheap enough for a
         hand-kept collection, and never out of step.'''
@@ -106,14 +144,29 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
                 if self._selected is not None else None)
         if game is not None:
             self._status.set_state(GLib.Variant('s', game.status))
-        error = None
-        if self._error is not None and self._error[0] == self._selected:
-            error = self._error[1]
-        self._rail.refresh(self._selected, running)
-        self._detail.show(game, running, error)
+        tiles = self._library.recent()
+        if not any(tile.id == self._hero for tile in tiles):
+            # Never chosen, or no longer among the last four: the one played
+            # last. Nothing played at all: no hero.
+            self._hero = tiles[0].id if tiles else None
+        if self._hero is None and self.page == 'hero':
+            self._pages.set_visible_child_name('library')
+
+        self._rail.refresh(self._selected, running,
+                           has_hero=self._hero is not None)
+        self._detail.show(game, running, self._error_for(self._selected))
+        if self._hero is not None:
+            hero = next(tile for tile in tiles if tile.id == self._hero)
+            self._hero_page.show(hero, tiles, running,
+                                 self._error_for(self._hero))
         if self._dialog is not None:
             self._dialog.set_running(
                 running is not None and running == self._dialog_game)
+
+    def _error_for(self, game_id):
+        if self._error is not None and self._error[0] == game_id:
+            return self._error[1]
+        return None
 
     # -- actions -----------------------------------------------------------
 
@@ -121,13 +174,22 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         if self._launcher.running_game == game_id:
             self._launcher.stop()
             return
+        # Cleared first: launch() redraws everything as the game starts, and
+        # an old failure must not stand next to "Running · Stop".
+        self._error = None
         try:
             self._launcher.launch(game_id)
-            self._error = None
         except LaunchError as error:
             # Shown under the title, so a click on Play never does nothing.
             self._error = (game_id, str(error))
             self.refresh()
+
+    def _on_details(self, game_id):
+        # Not select(): that forgets why Play just failed, and Details is
+        # where "Fix path…" is.
+        self._selected = game_id
+        self.refresh()
+        self.show_library()
 
     def _on_status(self, action, value):
         if self._selected is None:
@@ -168,11 +230,11 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             on_delete=self._delete_from_editor, focus=focus,
             folder=self._dialog_folder)
         self._overlay.add_overlay(self._dialog)
-        # The sheet covers the library for the mouse; this does the same for
+        # The sheet covers the pages for the mouse; this does the same for
         # the keyboard, so Tab cannot wander into a Play button behind it.
-        self._body.set_can_focus(False)
-        self._body.set_can_target(False)
-        self._body.add_css_class('behind-dialog')
+        self._pages.set_can_focus(False)
+        self._pages.set_can_target(False)
+        self._pages.add_css_class('behind-dialog')
 
     def close_editor(self):
         if self._dialog is not None:
@@ -184,9 +246,9 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             # else loaded for this dialog goes.
             download.remove_folder(self._dialog_folder)
             self._dialog_folder = None
-            self._body.set_can_focus(True)
-            self._body.set_can_target(True)
-            self._body.remove_css_class('behind-dialog')
+            self._pages.set_can_focus(True)
+            self._pages.set_can_target(True)
+            self._pages.remove_css_class('behind-dialog')
 
     def _save_editor(self, fields, pictures, pictures_changed):
         if self._dialog is None:
@@ -246,7 +308,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         width, height = self.get_default_size()
         self._state.update(width=width, height=height,
                            maximized=self.is_maximized(),
-                           selected=self._selected)
+                           selected=self._selected, hero=self._hero)
         state.save(self._state)
         return False
 

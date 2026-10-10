@@ -29,15 +29,18 @@ check('a list gives the defaults', stored('[1, 2]') == state.defaults())
 section('Values')
 
 loaded = stored(json.dumps({'width': 1700, 'height': 950,
-                            'maximized': True, 'selected': 7}))
+                            'maximized': True, 'selected': 7,
+                            'hero': 4}))
 check('a valid state is taken',
       loaded == {'width': 1700, 'height': 950, 'maximized': True,
-                 'selected': 7}, loaded)
+                 'selected': 7, 'hero': 4}, loaded)
 
 loaded = stored(json.dumps({'selected': True}))
 check('true is not a game', loaded['selected'] is None, loaded)
 loaded = stored(json.dumps({'selected': '7'}))
 check('a string is not a game', loaded['selected'] is None, loaded)
+loaded = stored(json.dumps({'hero': 'Kettle'}))
+check('nor is it a hero', loaded['hero'] is None, loaded)
 
 loaded = stored(json.dumps({'width': True, 'height': '900'}))
 check('bools and strings are not sizes',
@@ -54,15 +57,16 @@ check('too small is raised to the minimum',
 
 loaded = stored(json.dumps({'width': 1500, 'x': 10, 'y': 20}))
 check('position keys from elsewhere are ignored',
-      set(loaded) == {'width', 'height', 'maximized', 'selected'}, loaded)
+      set(loaded) == {'width', 'height', 'maximized', 'selected', 'hero'},
+      loaded)
 
 section('Round trip')
 
 state.save({'width': 1440, 'height': 810, 'maximized': False,
-            'selected': 3})
+            'selected': 3, 'hero': 5})
 check('what was saved comes back',
       state.load() == {'width': 1440, 'height': 810, 'maximized': False,
-                       'selected': 3})
+                       'selected': 3, 'hero': 5})
 check('no scratch file is left behind',
       not config.STATE_FILE.with_suffix('.json.tmp').exists())
 

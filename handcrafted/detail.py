@@ -15,7 +15,7 @@ from . import formatting, images, launch  # noqa: E402
 from .i18n import _  # noqa: E402
 from .library import STATUSES  # noqa: E402
 from .widgets import (Cover, PlayButton, Ratio, dot, label,  # noqa: E402
-                      status_label)
+                      play_mode, problem_text, status_label)
 
 CONTENT_WIDTH = 1100
 BACKDROP_HEIGHT = 440
@@ -128,14 +128,7 @@ class Detail(Gtk.ScrolledWindow):
 
         play = PlayButton('large')
         play.set_valign(Gtk.Align.END)
-        if problem:
-            play.set_mode('broken')
-        elif running is None:
-            play.set_mode('play')
-        elif running == game.id:
-            play.set_mode('running')
-        else:
-            play.set_mode('blocked')
+        play.set_mode(play_mode(game.id, problem, running))
         play.connect('clicked', lambda *_: self._on_play(game.id))
 
         gear = Gtk.Button(valign=Gtk.Align.END)
@@ -152,16 +145,8 @@ class Detail(Gtk.ScrolledWindow):
         return row
 
     def _error_row(self, game, problem, error):
-        if problem == 'not executable':
-            message = _('Executable is not marked as runnable')
-        elif problem:
-            message = _('Executable not found')
-        else:
-            # It looked fine, and still would not start: say what the system
-            # said rather than nothing at all.
-            message = _('Could not start: {reason}').format(reason=error)
         row = Gtk.Box(spacing=12)
-        row.append(label(message, 'danger'))
+        row.append(label(problem_text(problem, error), 'danger'))
         fix = Gtk.Button(label=_('Fix path…'))
         fix.add_css_class('quiet-button')
         fix.connect('clicked', lambda *_: self._on_fix_path(game.id))

@@ -10,7 +10,9 @@ a list of image links. That is where the name comes from.
 
 In development, and usable: add, edit and delete games, give them images
 from a list of links, see them grouped by status, play and stop them with
-the time measured. The hero view above the library comes next.
+the time measured. Once something has been played, the window opens on a
+hero with the game played last and the four most recent as tiles. Scrolling
+between hero and library comes next.
 
 To look at it without a library of your own, fill a throwaway one:
 
@@ -40,9 +42,9 @@ From the repository:
 
 Starting it a second time brings the open window to the front.
 
-The library lives in `~/.local/share/handcrafted/`, the window size in
-`~/.config/handcrafted/state.json`. A few things can be set in
-`~/.config/handcrafted/config.json`:
+The library lives in `~/.local/share/handcrafted/`; the window size, the
+selected game and the hero in `~/.config/handcrafted/state.json`. A few
+things can be set in `~/.config/handcrafted/config.json`:
 
 ```json
 {
@@ -64,7 +66,7 @@ No test runner to install. Run each file directly:
 
 ```
 /usr/bin/python3 tests/test_config.py       # the settings file
-/usr/bin/python3 tests/test_state.py        # the remembered window size
+/usr/bin/python3 tests/test_state.py        # what the window remembers
 /usr/bin/python3 tests/test_library.py      # games and play sessions
 /usr/bin/python3 tests/test_images.py       # images on disk
 /usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
@@ -72,6 +74,7 @@ No test runner to install. Run each file directly:
 /usr/bin/python3 tests/test_download.py     # images from links, locally
 DISPLAY=:0 /usr/bin/python3 tests/test_window.py   # the library view
 DISPLAY=:0 /usr/bin/python3 tests/test_dialog.py   # adding and editing
+DISPLAY=:0 /usr/bin/python3 tests/test_hero.py     # the hero and its tiles
 ```
 
 ## What it will not do
