@@ -8,6 +8,7 @@ rules), as do Details, and Alt+Up and Alt+Down.
 '''
 
 import os
+import sqlite3
 import time
 
 import gi
@@ -65,7 +66,8 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             on_play=self._on_play,
             on_edit=self.open_editor,
             on_fix_path=lambda game_id: self.open_editor(
-                game_id, focus='executable'))
+                game_id, focus='executable'),
+            on_add=lambda: self.open_editor(None))
         body = Gtk.Box()
         body.append(self._rail)
         body.append(self._detail)
@@ -141,6 +143,13 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
 
     def show_library(self):
         self._pages.set_visible_child_name('library')
+
+    def _keys_to_library(self):
+        '''Alt+Down: as the wheel does, and with the selected game focused,
+        so the arrow keys carry on from it. Only from the keyboard -- a
+        focused row would pull the rail back to it after a scroll.'''
+        self.show_library()
+        self._rail.focus_selected()
 
     @property
     def page(self):
@@ -245,20 +254,57 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         return True
 
     def _add_shortcuts(self):
-        '''Alt+Down and Alt+Up: the same, for the keyboard.'''
+        '''The keyboard's way to everything the mouse does here. Each key
+        is a window action, so tests and anything else can trigger the
+        same thing by name.'''
         shortcuts = Gtk.ShortcutController()
-        for keys, move in (('<Alt>Down', self.show_library),
-                           ('<Alt>Up', self.show_hero)):
+        self._key_actions = {}
+        for name, keys, callback in (
+                ('new-game', '<Control>n', lambda: self.open_editor(None)),
+                ('edit-game', '<Control>e', self._edit_current),
+                ('play', '<Control>Return', self._play_current),
+                ('fullscreen', 'F11', self._toggle_fullscreen),
+                ('to-library', '<Alt>Down', self._keys_to_library),
+                ('to-hero', '<Alt>Up', self.show_hero)):
+            action = Gio.SimpleAction.new(name, None)
+            action.connect('activate', lambda *_, c=callback: c())
+            self.add_action(action)
+            self._key_actions[name] = action
             shortcuts.add_shortcut(Gtk.Shortcut(
                 trigger=Gtk.ShortcutTrigger.parse_string(keys),
-                action=Gtk.CallbackAction.new(self._shortcut, move)))
+                action=Gtk.NamedAction.new(f'win.{name}')))
         self.add_controller(shortcuts)
 
-    def _shortcut(self, _widget, _args, move):
-        if self._dialog is not None:
-            return False  # not ours to take while the dialog is up
-        move()
-        return True
+    def _keys_for_the_window(self, enabled):
+        '''Off while the dialog is up, so its fields get those keys; an
+        action switched off leaves the key to whoever else wants it.'''
+        for name, action in self._key_actions.items():
+            if name != 'fullscreen':
+                action.set_enabled(enabled)
+
+    def _current(self):
+        '''The game the keys act on: the hero's on the hero page, the
+        selected one in the library.'''
+        return self._hero if self.page == 'hero' else self._selected
+
+    def _edit_current(self):
+        if self._current() is not None:
+            self.open_editor(self._current())
+
+    def _play_current(self):
+        '''As the Play button would: nothing while another game runs, where
+        the button is greyed out.'''
+        current = self._current()
+        if current is None or self._launcher.running_game not in (None,
+                                                                  current):
+            return
+        self._on_play(current)
+
+    def _toggle_fullscreen(self):
+        if self.is_fullscreen():
+            self.unfullscreen()
+        else:
+            self.fullscreen()
 
     def _time_frames(self, stack, _pspec):
         '''With HANDCRAFTED_DEBUG_FRAMES set: how long each frame of a
@@ -341,7 +387,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             self._dialog_folder = download.new_folder()
         except OSError:
             # No room in ~/.cache: the dialog still opens, only without the
-            # link field.
+            # plus tile -- there is nowhere for new images to wait.
             self._dialog_folder = None
         self._dialog = GameDialog(
             game, pictures,
@@ -356,6 +402,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self._pages.set_can_focus(False)
         self._pages.set_can_target(False)
         self._pages.add_css_class('behind-dialog')
+        self._keys_for_the_window(False)
 
     def close_editor(self):
         if self._dialog is not None:
@@ -370,6 +417,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             self._pages.set_can_focus(True)
             self._pages.set_can_target(True)
             self._pages.remove_css_class('behind-dialog')
+            self._keys_for_the_window(True)
 
     def _save_editor(self, fields, pictures, pictures_changed):
         if self._dialog is None:
@@ -397,6 +445,12 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             self._dialog.show_error(
                 _('Could not save the images: {reason}').format(
                     reason=error.strerror or error))
+            return
+        except sqlite3.Error as error:
+            # A full disk or a locked file: said, rather than a Save that
+            # does nothing.
+            self._dialog.show_error(
+                _('Could not save: {reason}').format(reason=error))
             return
         self.close_editor()
         self.select(game_id)

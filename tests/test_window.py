@@ -19,7 +19,7 @@ import gi  # noqa: E402
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402
 
 from handcrafted import images  # noqa: E402
 from handcrafted.launch import LaunchError  # noqa: E402
@@ -78,6 +78,15 @@ def find(widget, kind):
     return None
 
 
+def buttons(widget):
+    found = [widget] if isinstance(widget, Gtk.Button) else []
+    child = widget.get_first_child()
+    while child is not None:
+        found.extend(buttons(child))
+        child = child.get_next_sibling()
+    return found
+
+
 def grids(widget):
     found = [widget] if isinstance(widget, Gtk.Grid) else []
     child = widget.get_first_child()
@@ -132,7 +141,7 @@ detail = window._detail
 section('First look')
 
 rail_text = texts(rail)
-check('the head shows count and total time', '3 · 2h 0m' in rail_text,
+check('the head shows count and total time', '3 · 2h' in rail_text,
       rail_text[:4])
 heads = [t for t in rail_text if t in ('NEW', 'PLAYING', 'DONE',
                                        'ABANDONED')]
@@ -295,6 +304,59 @@ check('a cover put into the folder by hand reaches the rail',
 images.remove(beta)
 window.refresh()
 
+section('A long description')
+
+from handcrafted.detail import DESCRIPTION_LINES  # noqa: E402
+from handcrafted.widgets import folded  # noqa: E402
+from handcrafted.widgets import label as make_label  # noqa: E402
+
+long_text = '\n\n'.join(f'Paragraph {n}: something about the game.'
+                         for n in range(8))
+body = make_label(long_text, 'detail-body', wrap=True)
+body.get_width = lambda: 400   # as if laid out 400 px wide
+cut = folded(body, long_text, DESCRIPTION_LINES)
+check('many short paragraphs are cut all the same, after five lines',
+      cut is not None and cut.endswith('…') and len(cut) < len(long_text),
+      cut)
+layout = body.create_pango_layout(cut)
+layout.set_width(400 * Pango.SCALE)
+layout.set_wrap(Pango.WrapMode.WORD)
+check('and what is left fits in them',
+      layout.get_line_count() <= DESCRIPTION_LINES, layout.get_line_count())
+check('a sentence\'s own full stop gives way to "…"', '.…' not in cut, cut)
+check('a short one is not cut', folded(body, 'Short.', DESCRIPTION_LINES) is None)
+
+section('Keys')
+
+window.select(alpha)
+window.show_library()
+window.activate_action('win.new-game', None)
+check('Ctrl+N opens "New game"',
+      window._dialog is not None and window._dialog._game is None)
+check('while it is open, the window\'s keys stand back',
+      not window.lookup_action('new-game').get_enabled()
+      and not window.lookup_action('play').get_enabled())
+check('all but F11', window.lookup_action('fullscreen').get_enabled())
+window.close_editor()
+check('and come back when it closes',
+      window.lookup_action('new-game').get_enabled())
+window.activate_action('win.edit-game', None)
+check('Ctrl+E edits the selected game',
+      window._dialog is not None and window._dialog._game.id == alpha)
+window.close_editor()
+launcher.running_game = beta  # another game runs
+window.activate_action('win.play', None)
+check('Ctrl+Enter does nothing while another game runs, as the greyed '
+      'Play would', launcher.running_game == beta and window._error is None,
+      window._error)
+launcher.running_game = None
+window.activate_action('win.play', None)
+check('Ctrl+Enter plays it', launcher.running_game == alpha)
+window.activate_action('win.play', None)
+check('and stops it again', launcher.running_game is None)
+check('the + says its key', rail._to_add.get_tooltip_text()
+      == 'Add a game (Ctrl+N)', rail._to_add.get_tooltip_text())
+
 section('Now playing')
 
 rail._playing.set_active(True)
@@ -318,9 +380,15 @@ section('Empty')
 for game in library.games():
     library.delete(game.id)
 window.refresh()
-check('an empty library says so',
-      'Your library is empty' in texts(detail))
+check('an empty library welcomes',
+      'Welcome to Handcrafted' in texts(detail))
 check('with totals of nothing', '0 · 0h' in texts(rail))
+welcome_add = next(b for b in buttons(detail)
+                   if b.get_label() == 'Add a game')
+welcome_add.emit('clicked')
+check('and its button opens "New game"',
+      window._dialog is not None and window._dialog._game is None)
+window.close_editor()
 
 section('In German')
 
@@ -340,11 +408,22 @@ else:
     real_locale = i18n.LOCALE_DIR
     i18n.LOCALE_DIR = folder / 'locale'
     i18n.setup('de')
+    # With the stylesheet: widths are what it makes them.
+    from gi.repository import Gdk  # noqa: E402
+    from handcrafted import config  # noqa: E402
+    style = Gtk.CssProvider()
+    style.load_from_path(str(config.STYLE_FILE))
+    Gtk.StyleContext.add_provider_for_display(
+        Gdk.Display.get_default(), style,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     german = Rail(on_select=lambda game_id: None, on_add=lambda: None)
+    holder = Gtk.Window()
+    holder.add_css_class('handcrafted')
+    holder.set_child(german)
     german.refresh(library.games(), None, None)
     german._playing.set_active(True)
     # As long as the totals get: a big library, played a great deal.
-    german._totals.set_label('99 · 999h 59min')
+    german._totals.set_label('999 · 99999h')
     shown = texts(german)
     check('the rail speaks German', 'Bibliothek' in shown, shown[:3])
     natural = german.measure(Gtk.Orientation.HORIZONTAL, -1).natural

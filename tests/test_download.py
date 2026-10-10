@@ -62,6 +62,10 @@ path = download.fetch(f'{BASE}/itch/cover.png?v=3', target)
 check('the extension comes from the content type, not the URL',
       path.suffix == '.jpg', path.name)
 
+path = download.fetch(f'{BASE}/mislabelled', target)
+check('and in the end from what the file is: a PNG sent as image/jpeg',
+      path.suffix == '.png', path.name)
+
 path = download.fetch(f'{BASE}/redirect', target)
 check('a redirect to http is followed', path.read_bytes() == PNG)
 
@@ -145,6 +149,73 @@ while not handed_over.empty():
     function(*args)
 check('once cancelled, nothing more arrives',
       progress == [] and results == [], (progress, results))
+
+section('From this computer')
+
+mine = Path(tempfile.mkdtemp(dir=folder))
+taken = Path(tempfile.mkdtemp(dir=folder))
+(mine / 'shot.png').write_bytes(PNG)
+copy = download.take(mine / 'shot.png', taken)
+check('a picture is copied in', copy.read_bytes() == PNG
+      and copy.parent == taken)
+check('and the original left where it was', (mine / 'shot.png').exists())
+(mine / 'really-a-jpeg.png').write_bytes(JPEG)
+copy = download.take(mine / 'really-a-jpeg.png', taken)
+check('named after what it is, not what it says',
+      copy.suffix == '.jpg', copy.name)
+check('not executable', copy.stat().st_mode & 0o111 == 0)
+
+
+def refused(path, expected):
+    try:
+        download.take(path, taken)
+    except DownloadError as error:
+        return expected in str(error), str(error)
+    return False, 'taken'
+
+
+(mine / 'notes.png').write_text('not a picture')
+(mine / 'drawing.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+for path, reason, name in (
+        (mine / 'notes.png', 'could not be read as an image',
+         'text that calls itself .png'),
+        (mine / 'drawing.svg', 'unsupported image type (image/svg+xml)',
+         'an SVG'),
+        (mine / 'gone.png', 'not a file', 'a file that is not there')):
+    ok, said = refused(path, reason)
+    check(f'{name} is refused: {reason}', ok, said)
+import os  # noqa: E402
+os.mkfifo(mine / 'pipe.png')
+for path, name in ((mine / 'pipe.png', 'a pipe, which would block forever'),
+                   (mine, 'a folder')):
+    ok, said = refused(path, 'not a file')
+    check(f'{name} is refused: not a file', ok, said)
+download.MAX_BYTES = 10
+ok, said = refused(mine / 'shot.png', 'larger than 20 MB')
+check('too large a file', ok, said)
+download.MAX_BYTES = 20 * 1024 * 1024
+download.MAX_PIXELS = 100
+ok, said = refused(mine / 'shot.png', 'too large (32 × 18)')
+check('too many pixels', ok, said)
+download.MAX_PIXELS = 64_000_000
+check('nothing refused is left behind',
+      sorted(p.suffix for p in taken.iterdir()) == ['.jpg', '.png'],
+      [p.name for p in taken.iterdir()])
+
+handed_over = queue.Queue()
+local = Loader(lambda function, *args: handed_over.put((function, args)),
+               fetch=download.take)
+arrived, results = [], []
+local.start([str(mine / 'shot.png'), str(mine / 'notes.png')], taken,
+            lambda n, total: None,
+            lambda source, path: arrived.append(path),
+            lambda failed: results.append(failed))
+while not results:
+    function, args = handed_over.get(timeout=10)
+    function(*args)
+check('the loader takes files too, in the background',
+      len(arrived) == 1 and len(results[0]) == 1
+      and results[0][0][0].endswith('notes.png'), results)
 
 section('The download folder')
 

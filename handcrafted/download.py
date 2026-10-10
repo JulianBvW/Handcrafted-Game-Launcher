@@ -1,4 +1,4 @@
-'''Images from a list of links.
+'''Images from a list of links, or from files on this computer.
 
 The one place Handcrafted goes on the network, and only for the addresses
 pasted into the dialog, only when Load is pressed. What comes back is not
@@ -6,8 +6,8 @@ trusted: it has to say it is an image, be one of a few known kinds, stay
 under a size and a time limit, and then actually open as an image. It is
 only ever read as one -- never executed, never kept if it fails.
 
-The file's extension comes from the response's Content-Type, never from the
-URL: a link ending in .png?v=3 may well serve a JPEG.
+The file's extension comes from what the file turns out to be, never from
+the URL: a link ending in .png?v=3 may well serve a JPEG.
 
 No GTK interface here, so it can be tested without a display. GdkPixbuf is
 used for the one thing it is for: telling whether a file is an image.
@@ -28,7 +28,7 @@ from pathlib import Path
 import gi
 
 gi.require_version('GdkPixbuf', '2.0')
-from gi.repository import GdkPixbuf, GLib  # noqa: E402
+from gi.repository import GdkPixbuf, Gio, GLib  # noqa: E402
 
 from . import __version__, config  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -158,8 +158,9 @@ def fetch(url, folder, cancelled=None):
                 # The connection ended before what was announced arrived.
                 raise DownloadError(_('broken response'))
 
-        _check_image(part)
-        final = part.with_suffix(TYPES[kind])
+        # Named after what it turned out to be: a server may call a PNG
+        # image/jpeg.
+        final = part.with_suffix(EXTENSIONS[_check_image(part)])
         part.rename(final)
         return final
 
@@ -189,8 +190,14 @@ def fetch(url, folder, cancelled=None):
                             or str(error)) from error
 
 
+# The extension a file is stored under, by what GdkPixbuf finds inside it.
+EXTENSIONS = {'jpeg': '.jpg', 'png': '.png', 'webp': '.webp', 'gif': '.gif',
+              'heif/avif': '.avif', 'avif': '.avif'}
+
+
 def _check_image(path):
-    '''Open it as an image, fully, or refuse it.'''
+    '''Open it as an image, fully, or refuse it. Returns the format's
+    name as GdkPixbuf gives it.'''
     try:
         info, width, height = GdkPixbuf.Pixbuf.get_file_info(str(path))
         if info is None or info.get_name() not in FORMATS:
@@ -201,6 +208,44 @@ def _check_image(path):
         GdkPixbuf.Pixbuf.new_from_file(str(path))
     except GLib.Error as error:
         raise DownloadError(_('could not be read as an image')) from error
+    return info.get_name()
+
+
+def take(source, folder, cancelled=None):
+    '''A file from this computer, checked like a download, and copied into
+    `folder` under the extension of what it really is. Returns the copy.
+
+    The original is never touched, only read. Only regular files: a pipe
+    or a device would block the reading thread for good.'''
+    source = Path(source)
+    if cancelled is not None and cancelled.is_set():
+        raise DownloadError(_('cancelled'))
+    try:
+        if not source.is_file():
+            raise DownloadError(_('not a file'))
+        if source.stat().st_size > MAX_BYTES:
+            raise DownloadError(_('larger than 20 MB'))
+        with open(source, 'rb') as file:
+            head = file.read(4096)
+    except OSError as error:
+        raise DownloadError(error.strerror or str(error)) from error
+    # What the first bytes say it is, the way a server's Content-Type
+    # would: anything but the known kinds -- an SVG above all -- is turned
+    # away before GdkPixbuf is asked to make sense of it.
+    guessed, _uncertain = Gio.content_type_guess(None, head)
+    kind_by_content = Gio.content_type_get_mime_type(guessed) or ''
+    if kind_by_content.startswith('image/') and kind_by_content not in TYPES:
+        raise DownloadError(_('unsupported image type ({type})').format(
+            type=kind_by_content))
+    kind = _check_image(source)
+    copy = folder / f'{uuid.uuid4().hex}{EXTENSIONS[kind]}'
+    try:
+        shutil.copyfile(source, copy)
+        os.chmod(copy, 0o644)  # an image, never anything to run
+    except OSError as error:
+        copy.unlink(missing_ok=True)
+        raise DownloadError(error.strerror or str(error)) from error
+    return copy
 
 
 # -- the download folder ----------------------------------------------------
@@ -228,15 +273,17 @@ def clear_all():
 # -- loading in the background ----------------------------------------------
 
 class Loader:
-    '''Loads a list of links one after the other in a thread of its own.
+    '''Loads a list of links -- or, given `take` as `fetch`, of files --
+    one after the other in a thread of its own.
 
     Everything it reports comes back through `deliver` -- GLib.idle_add in
     the application -- so the callbacks run in the main thread. Once
     cancelled, nothing more is delivered.
     '''
 
-    def __init__(self, deliver):
+    def __init__(self, deliver, fetch=fetch):
         self._deliver = deliver
+        self._fetch = fetch
         self._cancelled = None
 
     @property
@@ -270,7 +317,7 @@ class Loader:
                 return
             self._deliver(self._relay, cancelled, on_progress, n, len(links))
             try:
-                path = fetch(url, folder, cancelled)
+                path = self._fetch(url, folder, cancelled)
             except DownloadError as error:
                 failed.append((url, str(error)))
             except Exception as error:  # noqa: BLE001

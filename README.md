@@ -4,18 +4,20 @@ A game launcher for a library you keep by hand.
 
 No VNDB, no Steam, no metadata pulled from anywhere. Every game is entered
 by hand: a name, a line or two of description, the path to its launcher, and
-a list of image links. That is where the name comes from.
+a few pictures. That is where the name comes from.
 
-![The hero: the game played last, over the four most recent](docs/screenshot.png)
+![The hero: the game played last, over the four most recent][shot]
+
+[shot]: docs/screenshot.png
 
 ## Status
 
-In development, and usable: add, edit and delete games, give them images
-from a list of links, see them grouped by status, play and stop them with
-the time measured. Once something has been played, the window opens on a
-hero with the game played last and the four most recent as tiles. Scroll
-down to get from the hero to the library, and up again, from the top of the
-list, to get back (or Alt+Down and Alt+Up). In English and German.
+Complete for what it sets out to do: add, edit and delete games, give them
+pictures from this computer or from links, see them grouped by status, play
+and stop them with the time measured. Once something has been played, the
+window opens on a hero with the game played last and the four most recent
+as tiles. Scroll down to get from the hero to the library, and up again,
+from the top of the list, to get back. In English and German.
 
 To look at it without a library of your own, fill a throwaway one:
 
@@ -29,8 +31,11 @@ HOME=/tmp/hc-demo /usr/bin/python3 -m handcrafted
 Linux, Python 3, GTK 4 and libadwaita, via the system interpreter:
 
 ```
-sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1
+sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gettext
 ```
+
+`gettext` is only needed to build the translations; without it, Handcrafted
+installs in English.
 
 Use `/usr/bin/python3`, not `python3`. On a machine with conda or miniforge
 in the PATH, the latter has no `gi`.
@@ -79,9 +84,38 @@ things can be set in `~/.config/handcrafted/config.json`:
 
 `language` picks the interface language (`en` or `de`); without it, the
 system's is used. Run from the repository, translations need building once
-with `install.py --in-place`. `width` and `height` are the size of the very first window. After
-that, the size it was last left at wins. A missing, broken or half-wrong
-file is not an error: whatever cannot be used is ignored.
+with `install.py --in-place`. `width` and `height` are the size of the very
+first window. After that, the size it was last left at wins. A missing,
+broken or half-wrong file is not an error: whatever cannot be used is
+ignored.
+
+## Keys
+
+| Key | |
+|---|---|
+| Ctrl+N | add a game |
+| Ctrl+E | edit the selected game (on the hero: the hero's) |
+| Ctrl+Enter | play or stop it |
+| Alt+Down, Alt+Up | from the hero to the library and back |
+| Up, Down, Enter | move through the list and select |
+| F11 | full screen |
+| Escape | close the dialog, or the links sheet in it |
+
+## Pictures
+
+In the dialog, the tile with the plus at the end of the pictures adds more:
+from this computer, through the usual file chooser, or from links, pasted
+one per line. Either way each picture is checked before it is taken: a real
+JPEG, PNG, WebP, GIF or AVIF, at most 20 MB and 64 megapixels. Nothing is
+kept until Save; Cancel leaves the library as it was. The first picture is
+the cover; click another to make it the cover. Animated GIFs play in the
+game's gallery and in the dialog's preview, and stand still everywhere
+else.
+
+A long description shows five lines in the library, with "More" to unfold
+it, and four in the hero, where Details has the rest.
+
+## When it stutters
 
 If moving between hero and library stutters, start it with
 `HANDCRAFTED_DEBUG_FRAMES=1` in front: each change of page then prints how

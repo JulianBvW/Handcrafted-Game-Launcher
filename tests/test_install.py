@@ -165,6 +165,15 @@ check('and so do the settings', (places.config / 'config.json').is_file())
 stopped = quietly(install.uninstall, places)
 check('uninstalling twice is no error', stopped is None, stopped)
 
+section('A path a menu entry cannot carry')
+
+odd = install.Places(folder / 'odd$home')
+stopped = quietly(install.install, odd)
+check('is refused with a reason', stopped is not None
+      and 'cannot carry safely' in str(stopped.code), stopped)
+check('before anything was written', not odd.app.exists()
+      and not odd.desktop.exists())
+
 section('A link in the way')
 
 linked = install.Places(folder / 'linked-home')

@@ -141,7 +141,18 @@ def install_icon(places):
     shutil.copyfile(HERE / PACKAGE / 'icons' / f'{APP_ID}.svg', places.icon)
 
 
+def check_entry_path(run_from):
+    '''Inside Exec's quotes these characters would need escaping by rules
+    few launchers agree on; a home folder or checkout with one of them in
+    its path is rare enough to refuse, with the reason.'''
+    if any(char in str(run_from) for char in '"`$\\%'):
+        raise SystemExit(f'{run_from} contains one of " ` $ \\ %, which '
+                         'a menu entry cannot carry safely. Move it, or '
+                         'install without --in-place.')
+
+
 def write_desktop_entry(places, run_from):
+    check_entry_path(run_from)
     places.desktop.parent.mkdir(parents=True, exist_ok=True)
     places.desktop.write_text(DESKTOP_ENTRY.format(
         python=PYTHON, package=PACKAGE, path=run_from, app_id=APP_ID,
@@ -173,6 +184,7 @@ def install(places, in_place=False):
                          'gir1.2-gtk-4.0 gir1.2-adw-1')
 
     run_from = HERE if in_place else places.app
+    check_entry_path(run_from)  # before anything is changed
     # Translations first: if one does not compile, nothing has changed yet.
     languages = build_translations(run_from / 'locale')
     if in_place:

@@ -238,6 +238,13 @@ window.handcrafted button.outline-button:hover {
     background-color: @fill_hover;
 }
 
+/* Where the keyboard is: only when it is used, never after a click. */
+window.handcrafted button:focus-visible,
+window.handcrafted menubutton > button:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: 2px;
+}
+
 /* -- rail -------------------------------------------------------------- */
 .rail {
     background-color: @bg_rail;
@@ -303,6 +310,10 @@ window.handcrafted .switch button:checked .dot.accent {
 .rail-list row.rail-row:hover {
     background-color: @fill_1;
 }
+.rail-list row.rail-row:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: -2px;
+}
 .rail-list row.rail-row.selected {
     background-color: @fill_3;
 }
@@ -364,6 +375,19 @@ window.handcrafted .switch button:checked .dot.accent {
     font-size: 17px;
     line-height: 1.55;
     color: @text_2;
+}
+/* "More" and "Less" under a long description: a link, not a button. */
+window.handcrafted button.more-link {
+    color: @accent;
+    font-size: 15px;
+    padding: 0;
+}
+/* On the label: a button does not hand its text decoration down. */
+window.handcrafted button.more-link label {
+    text-decoration-line: underline;
+}
+window.handcrafted button.more-link:hover {
+    color: @accent_hover;
 }
 .figures {
     border-top: 1px solid @line;
@@ -466,6 +490,14 @@ window.handcrafted button.hero-tile.current .cover {
     margin: 8px;
     font-size: 10px;
     font-weight: 700;
+}
+
+.welcome {
+    padding: 40px;
+}
+window.handcrafted .welcome button.primary {
+    min-height: 52px;
+    margin-top: 10px;
 }
 
 /* -- scrollbars -------------------------------------------------------- */
@@ -630,7 +662,42 @@ window.handcrafted button.remove-badge {
     padding: 0;
 }
 
-/* -- links in the dialog ----------------------------------------------- */
+/* -- adding images ---------------------------------------------------- */
+/* The plus tile at the end of the row: an empty thumbnail. */
+window.handcrafted menubutton.add-thumb > button {
+    border: 1px dashed @stroke_dashed;
+    border-radius: 6px;
+    color: @text_3;
+    transition: background-color 120ms ease-out;
+}
+window.handcrafted menubutton.add-thumb > button:hover {
+    background-color: @fill_hover;
+    color: @text;
+}
+/* The links sheet over the dialog. */
+.links-scrim {
+    background-color: rgba(6, 6, 7, 0.6);
+}
+.links-card {
+    background-color: @bg_rail;
+    border: 1px solid @line;
+    border-radius: 16px;
+    padding: 24px;
+}
+.links-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.44px;
+}
+window.handcrafted .links-card button.primary {
+    min-height: 40px;
+    padding: 0 22px;
+    font-size: 15px;
+}
+window.handcrafted .links-card button.quiet-button {
+    min-height: 40px;
+    padding: 0 12px;
+}
 .links-box {
     background-color: @fill_2;
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -653,16 +720,6 @@ textview.links-field,
    any margin would set it apart from where typing starts. */
 .links-placeholder {
     color: @text_ghost;
-}
-window.handcrafted button.load {
-    background-color: @fill_hover;
-    border-radius: 999px;
-    padding: 0 18px;
-    min-height: 38px;
-    font-size: 14px;
-}
-window.handcrafted button.load:disabled {
-    opacity: 0.5;
 }
 .load-reason {
     font-size: 11px;

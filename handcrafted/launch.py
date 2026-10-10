@@ -22,6 +22,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .i18n import _
+
 # How often to look whether a launcher's leftovers are still running.
 GROUP_POLL_SECONDS = 0.5
 
@@ -87,7 +89,7 @@ class Runner:
         '''Start the launcher and call on_end(Result) in the main thread
         once it and everything it left behind has ended.'''
         if self.running:
-            raise AlreadyRunning('another game is running')
+            raise AlreadyRunning(_('another game is running'))
         problem = check(executable)
         if problem:
             raise LaunchError(problem)
@@ -167,10 +169,10 @@ class Launcher:
 
     def launch(self, game_id):
         if self._runner.running:
-            raise AlreadyRunning('another game is running')
+            raise AlreadyRunning(_('another game is running'))
         game = self._library.get(game_id)
         if game is None:
-            raise LaunchError('no such game')
+            raise LaunchError(_('no such game'))
         self._runner.start(game.executable, self._on_end)
         self._game_id = game_id
         self._session_id = self._library.start_session(game_id)

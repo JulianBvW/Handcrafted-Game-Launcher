@@ -50,6 +50,9 @@ class Rail(Gtk.Box):
         # the big title rather than floating at its middle.
         title = label(_('Library'), 'section-title')
         title.set_valign(Gtk.Align.BASELINE_FILL)
+        # A little air on both sides of the word, beyond the row's spacing.
+        title.set_margin_start(4)
+        title.set_margin_end(4)
         mark = glyph(word=title)
         mark.set_valign(Gtk.Align.BASELINE_FILL)
         title_row.append(mark)
@@ -63,7 +66,8 @@ class Rail(Gtk.Box):
         add = Gtk.Button(valign=Gtk.Align.CENTER)
         add.set_child(Gtk.Image(icon_name='list-add-symbolic', pixel_size=14))
         add.add_css_class('icon-button')
-        add.set_tooltip_text(_('Add a game'))
+        add.set_tooltip_text(_('Add a game (Ctrl+N)'))
+        self._to_add = add
         add.connect('clicked', lambda *_: on_add())
         title_row.append(add)
         head.append(title_row)
@@ -113,6 +117,11 @@ class Rail(Gtk.Box):
         else:
             self._select(selected)
 
+    def focus_selected(self):
+        row = self._rows.get(self._selected)
+        if row is not None:
+            row.grab_focus()
+
     def _select(self, selected):
         if selected == self._selected:
             return
@@ -126,7 +135,7 @@ class Rail(Gtk.Box):
 
     def _build(self):
         count, seconds = library.totals(self._games)
-        self._totals.set_label(f'{count} · {formatting.playtime(seconds)}')
+        self._totals.set_label(f'{count} · {formatting.hours(seconds)}')
 
         groups = library.grouped(self._games)
         playing = next((len(members) for status, members in groups

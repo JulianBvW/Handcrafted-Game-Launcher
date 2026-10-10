@@ -16,26 +16,32 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 from . import formatting, images, launch, thumbs  # noqa: E402
 from .i18n import _  # noqa: E402
 from .library import STATUSES  # noqa: E402
-from .widgets import (Cover, PlayButton, Ratio, dot, label,  # noqa: E402
-                      play_mode, problem_text, status_label)
+from .widgets import (AfterAllocation, Cover, PlayButton, Ratio, dot,  # noqa: E402
+                      folded, glyph, label, play_mode, problem_text,
+                      status_label)
 
 CONTENT_WIDTH = 1100
+WELCOME_GLYPH = 64
+DESCRIPTION_LINES = 5
 BACKDROP_HEIGHT = 440
 GALLERY_WIDTH = CONTENT_WIDTH // 2
 
 
 class Detail(Gtk.ScrolledWindow):
     '''Calls on_play(game_id) for Play and Stop alike, on_edit(game_id) for
-    the gear and on_fix_path(game_id) for "Fix path…". The status menu acts
+    the gear, on_fix_path(game_id) for "Fix path…" and on_add() for the
+    welcome's "Add a game". The status menu acts
     through the window's `win.status` action.'''
 
-    def __init__(self, on_play, on_edit, on_fix_path):
+    def __init__(self, on_play, on_edit, on_fix_path, on_add):
         super().__init__(hexpand=True, vexpand=True)
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.add_css_class('detail')
         self._on_fix_path = on_fix_path
+        self._on_add = on_add
         self._shown = None
         self._drawn = None  # what it was last drawn from
+        self._expanded = None  # the game whose description is unfolded
 
         # Built once and moved into each new drawing: a MenuButton builds
         # its whole popover when it gets a menu, and setting a tooltip is
@@ -47,7 +53,7 @@ class Detail(Gtk.ScrolledWindow):
         self._gear.set_child(Gtk.Image(icon_name='emblem-system-symbolic',
                                        pixel_size=22))
         self._gear.add_css_class('ring-button')
-        self._gear.set_tooltip_text(_('Edit game'))
+        self._gear.set_tooltip_text(_('Edit game (Ctrl+E)'))
         self._gear.connect('clicked', lambda *_: on_edit(self._shown))
         self._status_menu = self._build_status_menu()
 
@@ -67,10 +73,7 @@ class Detail(Gtk.ScrolledWindow):
         self._drawn = drawn
 
         if game is None:
-            empty = label(_('Your library is empty'), 'meta-muted',
-                          xalign=0.5)
-            empty.set_valign(Gtk.Align.CENTER)
-            self.set_child(empty)
+            self.set_child(self._welcome())
             self._shown = None
             return
 
@@ -82,6 +85,8 @@ class Detail(Gtk.ScrolledWindow):
         overlay.set_measure_overlay(content, True)
 
         changed = game.id != self._shown
+        if changed:
+            self._expanded = None  # another game opens folded
         position = self.get_vadjustment().get_value()
         self.set_child(overlay)
         self._shown = game.id
@@ -96,6 +101,27 @@ class Detail(Gtk.ScrolledWindow):
         return GLib.SOURCE_REMOVE
 
     # -- parts -------------------------------------------------------------
+
+    def _welcome(self):
+        '''An empty library: what this is, and the way in.'''
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
+                      halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+        box.add_css_class('welcome')
+        mark = glyph(height=WELCOME_GLYPH)
+        mark.set_halign(Gtk.Align.CENTER)
+        box.append(mark)
+        box.append(label(_('Welcome to Handcrafted'), 'dialog-title',
+                         xalign=0.5))
+        text = label(_('Add your first game: its name, its launcher and a '
+                       'few pictures.'), 'detail-body', xalign=0.5,
+                     wrap=True)
+        text.set_max_width_chars(48)
+        box.append(text)
+        add = Gtk.Button(label=_('Add a game'), halign=Gtk.Align.CENTER)
+        add.add_css_class('primary')
+        add.connect('clicked', lambda *_: self._on_add())
+        box.append(add)
+        return box
 
     def _backdrop(self, game, pictures):
         backdrop = Gtk.Overlay(valign=Gtk.Align.START)
@@ -118,10 +144,7 @@ class Detail(Gtk.ScrolledWindow):
             column.append(self._error_row(game, problem, error))
 
         if game.description:
-            body = label(game.description, 'detail-body', wrap=True)
-            body.set_max_width_chars(80)
-            body.set_halign(Gtk.Align.START)
-            column.append(body)
+            column.append(self._description(game))
 
         column.append(self._figures(game))
         if pictures:
@@ -134,6 +157,46 @@ class Detail(Gtk.ScrolledWindow):
         clamp.set_child(column)
         clamp.set_valign(Gtk.Align.START)
         return clamp
+
+    def _description(self, game):
+        '''Five lines, then "…" and "More"; "Less" folds it again. The link
+        shows only when there is more than five lines to show.
+
+        Cut by hand: Pango's own line limit counts per paragraph, and a
+        description of many short paragraphs never reaches it.'''
+        full = game.description
+        body = label(full, 'detail-body', wrap=True)
+        body.set_max_width_chars(80)
+        body.set_halign(Gtk.Align.START)
+        more = Gtk.Button(halign=Gtk.Align.START, visible=False)
+        more.add_css_class('more-link')
+
+        def fold():
+            # Known only once the text has its width: so after allocation.
+            expanded = self._expanded == game.id
+            cut = None if expanded else folded(body, full,
+                                                DESCRIPTION_LINES)
+            text = cut or full
+            if body.get_text() != text:
+                body.set_text(text)
+            more.set_visible(expanded or cut is not None)
+            more.set_label(_('Less') if expanded else _('More'))
+            return GLib.SOURCE_REMOVE
+
+        def toggle(_button):
+            self._expanded = None if self._expanded == game.id else game.id
+            fold()
+
+        more.connect('clicked', toggle)
+        holder = Gtk.Box(halign=Gtk.Align.START)
+        holder.set_layout_manager(
+            AfterAllocation(lambda: GLib.idle_add(fold)))
+        holder.append(body)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.append(holder)
+        box.append(more)
+        return box
 
     def _title_row(self, game, running, problem):
         eyebrow = Gtk.Box(spacing=8)
@@ -224,8 +287,8 @@ class Detail(Gtk.ScrolledWindow):
             texture = thumbs.texture(path, GALLERY_WIDTH)
             ratio = (texture.get_width() / texture.get_height()
                      if texture is not None else 16 / 9)
-            cell = Ratio(Cover(path, game.name, GALLERY_WIDTH), ratio,
-                         firm=True)
+            cell = Ratio(Cover(path, game.name, GALLERY_WIDTH, animate=True),
+                         ratio, firm=True)
             cell.add_css_class('gallery-image')
             shorter = heights.index(min(heights))
             columns[shorter].append(cell)

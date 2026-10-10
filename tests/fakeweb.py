@@ -32,6 +32,7 @@ ROUTES = {
     '/cover.png': (200, 'image/png', PNG, {}),
     '/photo.jpg': (200, 'image/jpeg', JPEG, {}),
     '/itch/cover.png': (200, 'image/jpeg; charset=binary', JPEG, {}),
+    '/mislabelled': (200, 'image/jpeg', PNG, {}),
     '/page': (200, 'text/html; charset=utf-8', b'<html></html>', {}),
     '/liar.png': (200, 'image/png', b'this is not a picture', {}),
     '/drawing.svg': (200, 'image/svg+xml', SVG, {}),

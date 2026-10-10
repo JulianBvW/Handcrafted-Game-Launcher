@@ -1,5 +1,7 @@
 '''Small pieces the rail, the detail column and the hero share.'''
 
+from pathlib import Path
+
 import gi
 
 gi.require_version('Gtk', '4.0')
@@ -140,16 +142,22 @@ class Cover(Gtk.Box):
 
     `path` is the image file or None. `width` is the width it is shown at,
     for loading it at the right size. `stripe` names the placeholder's grid
-    (6, 8 or 12 px) and `initial_class` the size of its letter.
+    (6, 8 or 12 px) and `initial_class` the size of its letter. `animate`
+    plays an animated GIF instead of showing its first frame -- for the
+    large places only; a moving thumbnail in every list would be noise.
     '''
 
     def __init__(self, path, name, width, stripe=8, initial_class=None,
-                 placeholder_text=None):
+                 placeholder_text=None, animate=False):
         super().__init__(hexpand=True, vexpand=True)
         self.add_css_class('cover')
         self.set_overflow(Gtk.Overflow.HIDDEN)
 
-        texture = thumbs.texture(path, width) if path else None
+        texture = None
+        if path and animate and Path(path).suffix.lower() == '.gif':
+            texture = thumbs.animation(path)
+        if texture is None and path:
+            texture = thumbs.texture(path, width)
         if texture is not None:
             picture = Gtk.Picture.new_for_paintable(texture)
             picture.set_content_fit(Gtk.ContentFit.COVER)
@@ -307,3 +315,62 @@ def glyph(height=None, word=None):
     box.append(picture)
     box.add_css_class('glyph')
     return box
+
+
+# -- text cut to a number of lines -------------------------------------------
+
+def folded(body, text, lines):
+    '''`text` cut after `lines` lines as the label `body` lays it out at
+    its present width, ending in "…" -- or None if it fits as it is.
+
+    By hand, because Pango's own line limit (Gtk.Label.set_lines) counts
+    per paragraph: a text of many short paragraphs never reaches it.'''
+    width = body.get_width()
+    if width <= 0:
+        return None
+    layout = body.create_pango_layout(text)
+    layout.set_width(width * Pango.SCALE)
+    layout.set_wrap(Pango.WrapMode.WORD)
+    if layout.get_line_count() <= lines:
+        return None
+    last = layout.get_line_readonly(lines - 1)
+    # Pango counts in bytes of UTF-8. A few characters fewer, so "…" still
+    # fits on the last line rather than starting a sixth.
+    end = last.start_index + last.length
+    kept = text.encode('utf-8')[:end].decode('utf-8', 'ignore')
+    kept = kept.rstrip()
+    if last.length:
+        kept = kept[:-2].rstrip()
+    # "keep.…" reads like a typo: the sentence's own stop gives way.
+    return kept.rstrip(' .,;:') + '…'
+
+
+class AfterAllocation(Gtk.LayoutManager):
+    '''Lays out its one child like a plain box, and says when it has: a
+    text cut to a number of lines needs to know its width first.'''
+
+    def __init__(self, allocated):
+        super().__init__()
+        self._allocated = allocated
+        self._size = None
+
+    def do_get_request_mode(self, _widget):
+        return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+    def do_measure(self, widget, orientation, for_size):
+        minimum, natural, _, _ = widget.get_first_child().measure(
+            orientation, for_size)
+        if orientation == Gtk.Orientation.VERTICAL:
+            # Before it is cut, the whole text would ask for its whole
+            # height as a minimum, and hold the window open that tall.
+            # A wish, then: the cut that follows brings it down.
+            minimum = 0
+        return minimum, natural, -1, -1
+
+    def do_allocate(self, widget, width, height, baseline):
+        child = widget.get_first_child()
+        needed = child.measure(Gtk.Orientation.VERTICAL, width).minimum
+        child.allocate(width, max(height, needed), baseline, None)
+        if (width, height) != self._size:  # only when it changed
+            self._size = (width, height)
+            self._allocated()

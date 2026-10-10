@@ -17,7 +17,7 @@ import gi  # noqa: E402
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
 from handcrafted import images  # noqa: E402
 from handcrafted.library import Library  # noqa: E402
@@ -233,67 +233,137 @@ window.open_editor(kettle)
 dialog = window._dialog
 cache = window._dialog_folder
 check('the dialog has a download folder of its own', cache.is_dir(), cache)
+check('there is no link field in the dialog itself',
+      not hasattr(dialog, '_links'))
+check('but a plus tile at the end of the row',
+      dialog._add is not None
+      and dialog._thumbs.get_last_child().get_child() is dialog._add)
+dialog.activate_action('dialog.from-url', None)
+modal = dialog._modal
+check('"From links…" opens the links sheet', modal is not None)
 check('Load is greyed out while the field is empty',
-      not dialog._load.get_sensitive())
-dialog._links.get_buffer().set_text(
-    f'{BASE}/cover.png\n\n{BASE}/missing.png\nnot a link\n'
-    f'{BASE}/photo.jpg\n')
-check('a link frees it', dialog._load.get_sensitive())
-buffer = dialog._links.get_buffer()
+      not modal._load.get_sensitive())
+buffer = modal._links.get_buffer()
+buffer.set_text(f'{BASE}/cover.png')
+check('a link frees it', modal._load.get_sensitive())
 buffer.set_text('')
 buffer.insert_at_cursor('https://one.example/a.png')
-dialog._after_paste(buffer, None)
+modal._after_paste(buffer, None)
 check('after pasting a link the cursor is on the next line',
-      dialog._link_text() == 'https://one.example/a.png\n',
-      repr(dialog._link_text()))
+      modal._link_text() == 'https://one.example/a.png\n',
+      repr(modal._link_text()))
 buffer.insert_at_cursor('https://two.example/b.png\n')
-dialog._after_paste(buffer, None)
+modal._after_paste(buffer, None)
 check('a paste that ends in a newline gets no second one',
-      dialog._link_text().endswith('b.png\n'), repr(dialog._link_text()))
+      modal._link_text().endswith('b.png\n'), repr(modal._link_text()))
 buffer.set_text(f'{BASE}/cover.png\n\n{BASE}/missing.png\nnot a link\n'
                 f'{BASE}/photo.jpg\n')
 seen = set()
-dialog._load.connect('notify::label',
-                     lambda button, _: seen.add(button.get_label()))
-dialog._load.emit('clicked')
-check('and finishes', until(lambda: not dialog._loader.running))
-until(lambda: dialog._load.get_label() == 'Load')
+modal._load.connect('notify::label',
+                    lambda button, _: seen.add(button.get_label()))
+modal._load.emit('clicked')
+check('and finishes', until(lambda: not modal.loading))
+until(lambda: modal._load.get_label() == 'Load')
 check('it counted along while loading',
       {'Loading 1/3…', 'Loading 2/3…', 'Loading 3/3…'} <= seen, seen)
 check('two images are appended at the end',
       [p.read_bytes() for p in dialog._pictures] == before + [PNG, JPEG],
       len(dialog._pictures))
+check('with failures the sheet stays open', dialog._modal is modal)
 check('the failed and the refused lines stay in the field',
-      dialog._link_text().splitlines()
-      == [f'{BASE}/missing.png', 'not a link'], dialog._link_text())
-check('with a summary', dialog._load_summary.get_label() == '2 of 4 failed',
-      dialog._load_summary.get_label())
-check('and a reason per line', len(texts(dialog._load_reasons)) == 2
-      and 'HTTP 404' in texts(dialog._load_reasons)[0],
-      texts(dialog._load_reasons))
+      modal._link_text().splitlines()
+      == [f'{BASE}/missing.png', 'not a link'], modal._link_text())
+check('with a summary', modal._load_summary.get_label() == '2 of 4 failed',
+      modal._load_summary.get_label())
+check('and a reason per line', len(texts(modal._load_reasons)) == 2
+      and 'HTTP 404' in texts(modal._load_reasons)[0],
+      texts(modal._load_reasons))
 check('nothing in the library yet', on_disk(kettle) == before)
-dialog._links.get_buffer().set_text(
-    f'{BASE}/cover.png\n{BASE}/missing.png')
-dialog._start_loading()
-until(lambda: len(dialog._pictures) == len(before) + 3)
+buffer.set_text(f'{BASE}/cover.png')
+modal._load.emit('clicked')
+check('all of them in, it closes by itself',
+      until(lambda: dialog._modal is None))
+dialog.activate_action('dialog.from-url', None)
+modal = dialog._modal
+modal._links.get_buffer().set_text(f'{BASE}/slow')
+modal._start_loading()
+dialog._on_key(None, Gdk.KEY_Escape, 0, 0)
+check('Esc closes the sheet, not the dialog',
+      dialog._modal is None and window._dialog is dialog)
+check('and stops what was loading', not modal.loading)
+
+section('Images from this computer')
+
+mine = folder / 'mine'
+mine.mkdir()
+(mine / 'shot.png').write_bytes(PNG)
+(mine / 'notes.png').write_text('not a picture')
+count = len(dialog._pictures)
+dialog.add_files([str(mine / 'shot.png'), str(mine / 'notes.png')])
+check('the good file arrives at the end',
+      until(lambda: len(dialog._pictures) == count + 1)
+      and dialog._pictures[-1].read_bytes() == PNG)
+check('as a copy in the dialog\'s folder, not the original',
+      dialog._pictures[-1].parent == cache)
+until(lambda: dialog._error.get_visible())
+check('the bad one is named, with why',
+      '1 of 2 could not be added' in dialog._error.get_label()
+      and 'notes.png — could not be read as an image'
+      in dialog._error.get_label(), dialog._error.get_label())
+tile = dialog._add
+dialog.add_files([str(mine / 'shot.png')])
+dialog.add_files([str(mine / 'shot.png')])
+check('a second batch while the first is copying does not cancel it',
+      until(lambda: len(dialog._pictures) == count + 3), len(dialog._pictures))
+check('the plus tile is the same one after images arrived, not rebuilt',
+      dialog._add is tile
+      and dialog._thumbs.get_last_child().get_child() is tile)
+dialog.add_files([str(mine / 'shot.png')])
 dialog._primary.emit('clicked')
-check('saving mid-load keeps what had arrived',
-      len(on_disk(kettle)) == len(before) + 3, len(on_disk(kettle)))
-dialog._primary.emit('clicked')
+check('Save pressed while a file is still copying waits for it',
+      window._dialog is dialog and dialog._save_waiting
+      or window._dialog is None)
+check('and then saves with it',
+      until(lambda: window._dialog is None)
+      and len(on_disk(kettle)) == count + 4, len(on_disk(kettle)))
 check('and the download folder is gone', not cache.exists())
 before = on_disk(kettle)
 
 window.open_editor(kettle)
 dialog = window._dialog
+dialog.activate_action('dialog.from-url', None)
+check('behind the links sheet the form takes no focus',
+      not dialog._content.get_can_focus())
+dialog._close_links()
+check('and gets it back afterwards', dialog._content.get_can_focus())
+dialog._on_cancel()
+
+window.open_editor(kettle)
+dialog = window._dialog
 cache = window._dialog_folder
-dialog._links.get_buffer().set_text(f'{BASE}/cover.png')
-dialog._load.emit('clicked')
-until(lambda: not dialog._loader.running)
+dialog.activate_action('dialog.from-url', None)
+dialog._modal._links.get_buffer().set_text(f'{BASE}/cover.png')
+dialog._modal._load.emit('clicked')
+until(lambda: dialog._modal is None)
 check('loaded, waiting in the folder', any(cache.iterdir()))
 dialog._on_cancel()
 check('Cancel leaves the library alone', on_disk(kettle) == before)
 check('and nothing in the download folder', not cache.exists())
 
+from handcrafted import download  # noqa: E402
+
+
+def no_room():
+    raise OSError(28, 'No space left on device')
+
+
+real_new_folder = download.new_folder
+download.new_folder = no_room
+window.open_editor(kettle)
+check('with no room for a download folder there is no plus tile',
+      window._dialog._add is None)
+window._dialog._on_cancel()
+download.new_folder = real_new_folder
 section('Delete')
 
 window.open_editor(None)

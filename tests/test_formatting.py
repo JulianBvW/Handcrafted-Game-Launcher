@@ -28,6 +28,11 @@ for seconds, expected in ((0, '0h'), (59, '0h'), (60, '1m'), (2700, '45m'),
     got = formatting.playtime(seconds)
     check(f'{seconds} s is {expected}', got == expected, got)
 
+for seconds, expected in ((0, '0h'), (3599, '0h'), (3600, '1h'),
+                          (231300, '64h'), (-5, '0h')):
+    got = formatting.hours(seconds)
+    check(f'{seconds} s in whole hours is {expected}', got == expected, got)
+
 section('Last played, by calendar day')
 
 now = ts(2026, 10, 10, 15, 0)

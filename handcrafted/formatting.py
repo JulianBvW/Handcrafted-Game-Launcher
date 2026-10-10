@@ -23,6 +23,12 @@ def _month(number):
             _('Dec'))[number - 1]
 
 
+def hours(seconds):
+    '''`0h`, `63h`: whole hours only, for the rail's totals, where the
+    minutes of a whole library say nothing and only take room.'''
+    return _('{hours}h').format(hours=max(0, int(seconds)) // 3600)
+
+
 def playtime(seconds):
     '''`0h`, `45m`, `23h 40m`. Leftover seconds are dropped.'''
     minutes = max(0, int(seconds)) // 60

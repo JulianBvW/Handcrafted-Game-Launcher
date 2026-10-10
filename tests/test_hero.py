@@ -75,8 +75,14 @@ def texts(widget):
         w, Gtk.Label))]
 
 
+def shown(window):
+    '''The hero page in view: the other one may still hold the last
+    drawing, until the next.'''
+    return window._hero_page.get_visible_child()
+
+
 def tiles(window):
-    return all_of(window._hero_page, lambda w: w.has_css_class('hero-tile'))
+    return all_of(shown(window), lambda w: w.has_css_class('hero-tile'))
 
 
 def tile_ids(window):
@@ -88,7 +94,7 @@ def tile(window, game_id):
 
 
 def play_label(window):
-    play = all_of(window._hero_page, lambda w: w.has_css_class('play'))[0]
+    play = all_of(shown(window), lambda w: w.has_css_class('play'))[0]
     return play, ' '.join(texts(play))
 
 
@@ -159,9 +165,9 @@ check('the game played fifth-last is not among them',
 check('never played is never a tile', ids['Never'] not in tile_ids(window))
 check('the hero tile is marked', tile(window, ids['Kettle']).has_css_class(
     'current'))
-check('its title is shown', 'Kettle' in texts(window._hero_page))
+check('its title is shown', 'Kettle' in texts(shown(window)))
 check('with Played and Last',
-      {'Played', 'Last'} <= set(texts(window._hero_page)))
+      {'Played', 'Last'} <= set(texts(shown(window))))
 check('a cover, under two veils', len(background(window)) == 3,
       background(window))
 
@@ -180,7 +186,7 @@ check('the tile keeps its placeholder',
 
 section('Details and back')
 
-details = next(b for b in all_of(window._hero_page, lambda w: isinstance(
+details = next(b for b in all_of(shown(window), lambda w: isinstance(
     w, Gtk.Button)) if b.get_label() == 'Details')
 details.emit('clicked')
 check('Details goes to the library', window.page == 'library')
@@ -260,17 +266,60 @@ check('a tile redraws the hero and leaves the detail column alone',
       window._detail.get_child() is drawing)
 tile(window, ids['Kettle']).emit('clicked')
 
+section('Fading from one game to the next')
+
+from gi.repository import Gtk as _Gtk  # noqa: E402
+
+page = shown(window)
+tile(window, ids['Lamp']).emit('clicked')
+check('another hero is drawn on the other page',
+      shown(window) is not page)
+check('and faded in',
+      window._hero_page.get_transition_type()
+      == _Gtk.StackTransitionType.CROSSFADE)
+page = shown(window)
+launcher.launch(ids['Lamp'])
+check('the same hero drawn again is swapped at once, not faded',
+      shown(window) is not page
+      and window._hero_page.get_transition_type()
+      == _Gtk.StackTransitionType.NONE)
+launcher.stop()
+tile(window, ids['Kettle']).emit('clicked')
+hero_page = window._hero_page
+hero_page._on_fade(hero_page, None)
+hidden = next(p for p in hero_page._pages if p is not shown(window))
+check('once a fade is over, the page faded out lets its pictures go',
+      hidden.get_first_child() is None)
+
+section('Keys on the hero')
+
+window.show_hero()
+window.activate_action('win.edit-game', None)
+check('Ctrl+E on the hero edits the hero game, not the selected one',
+      window._dialog is not None and window._dialog._game.id == window._hero)
+window.close_editor()
+window.activate_action('win.to-library', None)
+check('Alt+Down goes down', window.page == 'library')
+window.show_hero()
+window.set_focus(None)
+window.show_library()
+check('the wheel or Details does not pull the focus into the rail',
+      window.get_focus() is None
+      or not isinstance(window.get_focus(), Gtk.ListBoxRow))
+window.activate_action('win.to-hero', None)
+check('Alt+Up back up', window.page == 'hero')
+
 section('When Play fails')
 
 launcher.refuse = {ids['Kettle']: 'Permission denied'}
 play_label(window)[0].emit('clicked')
 check('the hero says why', 'Could not start: Permission denied'
-      in texts(window._hero_page), texts(window._hero_page))
+      in texts(shown(window)), texts(shown(window)))
 tile(window, ids['Moth']).emit('clicked')
 tile(window, ids['Kettle']).emit('clicked')
 check('choosing another hero and back does not forget it',
-      'Could not start: Permission denied' in texts(window._hero_page))
-details = next(b for b in all_of(window._hero_page, lambda w: isinstance(
+      'Could not start: Permission denied' in texts(shown(window)))
+details = next(b for b in all_of(shown(window), lambda w: isinstance(
     w, Gtk.Button)) if b.get_label() == 'Details')
 details.emit('clicked')
 check('Details still shows it, next to Fix path…',
@@ -280,7 +329,7 @@ window.show_hero()
 launcher.refuse = {}
 play_label(window)[0].emit('clicked')
 check('once it starts, the old reason is gone',
-      not any(t.startswith('Could not start') for t in texts(window._hero_page))
+      not any(t.startswith('Could not start') for t in texts(shown(window)))
       and play_label(window)[1] == 'Running · Stop')
 launcher.stop()
 
@@ -302,7 +351,9 @@ section('Deleting')
 
 library.delete(ids['Kettle'])
 window.refresh()
-check('the next game moves up as the hero', window._hero == ids['Moth'])
+check('the game played last before it moves up as the hero',
+      window._hero == recent(library.games())[0].id
+      and window._hero != ids['Kettle'])
 check('and the fifth-last played is a tile now',
       ids['Leaf'] in tile_ids(window))
 for game in recent(library.games(), limit=100):

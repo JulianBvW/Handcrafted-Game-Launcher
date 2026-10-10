@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Handcrafted\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-10 20:10+0200\n"
+"POT-Creation-Date: 2026-10-10 22:06+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,115 +18,164 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: handcrafted/detail.py:50 handcrafted/dialog.py:92
-msgid "Edit game"
+#: handcrafted/detail.py:55
+msgid "Edit game (Ctrl+E)"
 msgstr ""
 
-#: handcrafted/detail.py:70
-msgid "Your library is empty"
+#: handcrafted/detail.py:112
+msgid "Welcome to Handcrafted"
 msgstr ""
 
-#: handcrafted/detail.py:165
+#: handcrafted/detail.py:114
+msgid "Add your first game: its name, its launcher and a few pictures."
+msgstr ""
+
+#: handcrafted/detail.py:119
+msgid "Add a game"
+msgstr ""
+
+#: handcrafted/detail.py:174
+msgid "Less"
+msgstr ""
+
+#: handcrafted/detail.py:174
+msgid "More"
+msgstr ""
+
+#: handcrafted/detail.py:226
 msgid "Fix path…"
 msgstr ""
 
-#: handcrafted/detail.py:175
+#: handcrafted/detail.py:236
 msgid "Playtime"
 msgstr ""
 
-#: handcrafted/detail.py:176
+#: handcrafted/detail.py:237
 msgid "Last played"
 msgstr ""
 
-#: handcrafted/detail.py:177
+#: handcrafted/detail.py:238
 msgid "Added"
 msgstr ""
 
-#: handcrafted/detail.py:185
+#: handcrafted/detail.py:246
 msgid "Status"
 msgstr ""
 
-#: handcrafted/dialog.py:92
+#: handcrafted/dialog.py:117
+msgid "Edit game"
+msgstr ""
+
+#: handcrafted/dialog.py:117
 msgid "New game"
 msgstr ""
 
-#: handcrafted/dialog.py:96
+#: handcrafted/dialog.py:121
 msgid "Name"
 msgstr ""
 
-#: handcrafted/dialog.py:118
+#: handcrafted/dialog.py:143
 msgid "Version (optional)"
 msgstr ""
 
-#: handcrafted/dialog.py:125
+#: handcrafted/dialog.py:150
 msgid "Executable (.sh)"
 msgstr ""
 
-#: handcrafted/dialog.py:128
+#: handcrafted/dialog.py:153
 msgid "Browse"
 msgstr ""
 
-#: handcrafted/dialog.py:137
+#: handcrafted/dialog.py:161
 msgid "Save changes"
 msgstr ""
 
-#: handcrafted/dialog.py:137
+#: handcrafted/dialog.py:162
 msgid "Add to library"
 msgstr ""
 
-#: handcrafted/dialog.py:141
+#: handcrafted/dialog.py:167 handcrafted/dialog.py:547
 msgid "Cancel"
 msgstr ""
 
-#: handcrafted/dialog.py:147 handcrafted/dialog.py:371
+#: handcrafted/dialog.py:173 handcrafted/dialog.py:399
 msgid "Delete game"
 msgstr ""
 
-#: handcrafted/dialog.py:191
-msgid "One image URL per line"
-msgstr ""
-
-#: handcrafted/dialog.py:200 handcrafted/dialog.py:330
-#: handcrafted/dialog.py:350
-msgid "Load"
-msgstr ""
-
-#: handcrafted/dialog.py:223
+#: handcrafted/dialog.py:208
 msgid "cover image"
 msgstr ""
 
-#: handcrafted/dialog.py:236
+#: handcrafted/dialog.py:232
+msgid "From this computer…"
+msgstr ""
+
+#: handcrafted/dialog.py:233
+msgid "From links…"
+msgstr ""
+
+#: handcrafted/dialog.py:239 handcrafted/dialog.py:294
+msgid "Add images"
+msgstr ""
+
+#: handcrafted/dialog.py:248
 msgid "Make cover"
 msgstr ""
 
-#: handcrafted/dialog.py:242
+#: handcrafted/dialog.py:254
 msgid "COVER"
 msgstr ""
 
-#: handcrafted/dialog.py:254
+#: handcrafted/dialog.py:266
 msgid "Remove"
 msgstr ""
 
-#: handcrafted/dialog.py:309
+#: handcrafted/dialog.py:295
+msgid "Images"
+msgstr ""
+
+#: handcrafted/dialog.py:338
+#, python-brace-format
+msgid "{failed} of {total} could not be added"
+msgstr ""
+
+#: handcrafted/dialog.py:390
+msgid "Stop the game first"
+msgstr ""
+
+#: handcrafted/dialog.py:419
+msgid "Adding images…"
+msgstr ""
+
+#: handcrafted/dialog.py:446
+msgid "Click again to delete"
+msgstr ""
+
+#: handcrafted/dialog.py:452
+msgid "Choose the launcher"
+msgstr ""
+
+#: handcrafted/dialog.py:517
+msgid "Images from links"
+msgstr ""
+
+#: handcrafted/dialog.py:530
+msgid "One image URL per line"
+msgstr ""
+
+#: handcrafted/dialog.py:550 handcrafted/dialog.py:623
+#: handcrafted/dialog.py:650
+msgid "Load"
+msgstr ""
+
+#: handcrafted/dialog.py:603
 #, python-brace-format
 msgid "Loading {n}/{total}…"
 msgstr ""
 
-#: handcrafted/dialog.py:336
+#: handcrafted/dialog.py:633
 #, python-brace-format
 msgid "{failed} of {total} failed"
-msgstr ""
-
-#: handcrafted/dialog.py:362
-msgid "Stop the game first"
-msgstr ""
-
-#: handcrafted/dialog.py:411
-msgid "Click again to delete"
-msgstr ""
-
-#: handcrafted/dialog.py:417
-msgid "Choose the launcher"
 msgstr ""
 
 #: handcrafted/download.py:92 handcrafted/download.py:102
@@ -143,35 +192,40 @@ msgstr ""
 msgid "no type given"
 msgstr ""
 
-#: handcrafted/download.py:131
+#: handcrafted/download.py:131 handcrafted/download.py:238
 #, python-brace-format
 msgid "unsupported image type ({type})"
 msgstr ""
 
 #: handcrafted/download.py:135 handcrafted/download.py:155
+#: handcrafted/download.py:227
 msgid "larger than 20 MB"
 msgstr ""
 
-#: handcrafted/download.py:142
+#: handcrafted/download.py:142 handcrafted/download.py:222
 msgid "cancelled"
 msgstr ""
 
-#: handcrafted/download.py:144 handcrafted/download.py:176
-#: handcrafted/download.py:181
+#: handcrafted/download.py:144 handcrafted/download.py:177
+#: handcrafted/download.py:182
 msgid "timed out"
 msgstr ""
 
-#: handcrafted/download.py:159 handcrafted/download.py:185
+#: handcrafted/download.py:159 handcrafted/download.py:186
 msgid "broken response"
 msgstr ""
 
-#: handcrafted/download.py:197 handcrafted/download.py:203
+#: handcrafted/download.py:204 handcrafted/download.py:210
 msgid "could not be read as an image"
 msgstr ""
 
-#: handcrafted/download.py:199
+#: handcrafted/download.py:206
 #, python-brace-format
 msgid "too large ({width} × {height})"
+msgstr ""
+
+#: handcrafted/download.py:225
+msgid "not a file"
 msgstr ""
 
 #: handcrafted/formatting.py:21
@@ -222,172 +276,190 @@ msgstr ""
 msgid "Dec"
 msgstr ""
 
-#: handcrafted/formatting.py:31
+#: handcrafted/formatting.py:29
+#, python-brace-format
+msgid "{hours}h"
+msgstr ""
+
+#: handcrafted/formatting.py:37
 #, python-brace-format
 msgid "{hours}h {minutes}m"
 msgstr ""
 
-#: handcrafted/formatting.py:33
+#: handcrafted/formatting.py:39
 #, python-brace-format
 msgid "{minutes}m"
 msgstr ""
 
-#: handcrafted/formatting.py:34
+#: handcrafted/formatting.py:40
 msgid "0h"
 msgstr ""
 
-#: handcrafted/formatting.py:44
+#: handcrafted/formatting.py:50
 msgid "Never"
 msgstr ""
 
-#: handcrafted/formatting.py:49
+#: handcrafted/formatting.py:55
 msgid "Today"
 msgstr ""
 
-#: handcrafted/formatting.py:51
+#: handcrafted/formatting.py:57
 msgid "Yesterday"
 msgstr ""
 
-#: handcrafted/formatting.py:53
+#: handcrafted/formatting.py:59
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: handcrafted/formatting.py:55
+#: handcrafted/formatting.py:61
 msgid "Last week"
 msgstr ""
 
-#: handcrafted/formatting.py:58
+#: handcrafted/formatting.py:64
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: handcrafted/formatting.py:61
+#: handcrafted/formatting.py:67
 msgid "Last month"
 msgstr ""
 
-#: handcrafted/formatting.py:65
+#: handcrafted/formatting.py:71
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: handcrafted/formatting.py:68
+#: handcrafted/formatting.py:74
 msgid "Last year"
 msgstr ""
 
-#: handcrafted/formatting.py:70
+#: handcrafted/formatting.py:76
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: handcrafted/formatting.py:76
+#: handcrafted/formatting.py:82
 #, python-brace-format
 msgid "{day} {month} {year}"
 msgstr ""
 
-#: handcrafted/hero.py:145
+#: handcrafted/hero.py:187
 msgid "Details"
 msgstr ""
 
-#: handcrafted/hero.py:153
+#: handcrafted/hero.py:195
 msgid "Played"
 msgstr ""
 
-#: handcrafted/hero.py:154
+#: handcrafted/hero.py:196
 msgid "Last"
 msgstr ""
 
-#: handcrafted/hero.py:181
+#: handcrafted/hero.py:223
 msgid "Running"
 msgstr ""
 
-#: handcrafted/rail.py:49
+#: handcrafted/launch.py:92 handcrafted/launch.py:172
+msgid "another game is running"
+msgstr ""
+
+#: handcrafted/launch.py:175
+msgid "no such game"
+msgstr ""
+
+#: handcrafted/rail.py:51
 msgid "Library"
 msgstr ""
 
-#: handcrafted/rail.py:61
-msgid "Add a game"
+#: handcrafted/rail.py:69
+msgid "Add a game (Ctrl+N)"
 msgstr ""
 
-#: handcrafted/rail.py:68
+#: handcrafted/rail.py:77
 msgid "Everything"
 msgstr ""
 
-#: handcrafted/rail.py:131
+#: handcrafted/rail.py:145
 #, python-brace-format
 msgid "Now playing · {n}"
 msgstr ""
 
-#: handcrafted/rail.py:134
+#: handcrafted/rail.py:148
 msgid "Now playing"
 msgstr ""
 
-#: handcrafted/widgets.py:16
+#: handcrafted/widgets.py:18
 msgid "New"
 msgstr ""
 
-#: handcrafted/widgets.py:16
+#: handcrafted/widgets.py:18
 msgid "Playing"
 msgstr ""
 
-#: handcrafted/widgets.py:16
+#: handcrafted/widgets.py:18
 msgid "Done"
 msgstr ""
 
-#: handcrafted/widgets.py:17
+#: handcrafted/widgets.py:19
 msgid "Abandoned"
 msgstr ""
 
-#: handcrafted/widgets.py:25
+#: handcrafted/widgets.py:27
 msgid "Executable is not marked as runnable"
 msgstr ""
 
-#: handcrafted/widgets.py:27
+#: handcrafted/widgets.py:29
 msgid "Executable not found"
 msgstr ""
 
-#: handcrafted/widgets.py:30
+#: handcrafted/widgets.py:32
 #, python-brace-format
 msgid "Could not start: {reason}"
 msgstr ""
 
-#: handcrafted/widgets.py:220
+#: handcrafted/widgets.py:229
 msgid "Running · Stop"
 msgstr ""
 
-#: handcrafted/widgets.py:220
+#: handcrafted/widgets.py:229
 msgid "Play"
 msgstr ""
 
-#: handcrafted/widgets.py:222
+#: handcrafted/widgets.py:231
 msgid "Another game is running"
 msgstr ""
 
-#: handcrafted/window.py:398
+#: handcrafted/window.py:446
 #, python-brace-format
 msgid "Could not save the images: {reason}"
 msgstr ""
 
-#: handcrafted/window.py:437
+#: handcrafted/window.py:453
+#, python-brace-format
+msgid "Could not save: {reason}"
+msgstr ""
+
+#: handcrafted/window.py:491
 msgid "A game is still running"
 msgstr ""
 
-#: handcrafted/window.py:438
+#: handcrafted/window.py:492
 msgid "Its playtime will not be counted if Handcrafted closes now."
 msgstr ""
 
-#: handcrafted/window.py:440
+#: handcrafted/window.py:494
 msgid "Keep open"
 msgstr ""
 
-#: handcrafted/window.py:440
+#: handcrafted/window.py:494
 msgid "Close anyway"
 msgstr ""

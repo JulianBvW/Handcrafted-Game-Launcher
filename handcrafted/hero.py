@@ -12,15 +12,16 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402
 
 from . import formatting, images, launch, thumbs  # noqa: E402
 from .i18n import _  # noqa: E402
-from .widgets import (Cover, PlayButton, Ratio, glyph, label,  # noqa: E402
-                      play_mode, problem_text)
+from .widgets import (AfterAllocation, Cover, PlayButton, Ratio,  # noqa: E402
+                      folded, glyph, label, play_mode, problem_text)
 
 GLYPH_HEIGHT = 40
 INFO_WIDTH = 680
+FADE_MS = 300  # from one hero game to the next
 BODY_WIDTH = 540
 BODY_LINES = 4
 TILES = 4
@@ -52,19 +53,33 @@ class _LayersLayout(Gtk.LayoutManager):
             child = child.get_next_sibling()
 
 
-class Hero(Gtk.Box):
+class Hero(Gtk.Stack):
     '''Calls on_play(game_id) for Play and Stop alike, on_details(game_id)
-    for Details and on_choose(game_id) when a tile is clicked.'''
+    for Details and on_choose(game_id) when a tile is clicked.
+
+    Two pages, drawn in turn: each drawing goes into the one out of view,
+    which then takes its place -- cross-faded when another game becomes
+    the hero, at once when the same one is only drawn again.'''
 
     def __init__(self, on_play, on_details, on_choose):
-        super().__init__(hexpand=True, vexpand=True)
-        self.set_layout_manager(_LayersLayout())
+        super().__init__(hexpand=True, vexpand=True,
+                         transition_duration=FADE_MS)
         self.add_css_class('hero')
         self._on_play = on_play
         self._on_details = on_details
         self._on_choose = on_choose
-        self._layers = []
-        self._drawn = None  # what it was last drawn from
+        self._pages = []
+        for _n in range(2):
+            page = Gtk.Box(hexpand=True, vexpand=True)
+            page.set_layout_manager(_LayersLayout())
+            self.add_child(page)
+            self._pages.append(page)
+        self._page = self._pages[0]  # the one being drawn into
+        self._layers = []    # of the page in view
+        self._drawn = None   # what it was last drawn from
+        self._shown = None   # the game in view
+        self._waiting = None  # a drawing asked for during a fade
+        self.connect('notify::transition-running', self._on_fade)
 
     def show(self, game, tiles, running, error=None):
         '''Draw `game` (a library.Game) over `tiles`, the games played most
@@ -80,10 +95,19 @@ class Hero(Gtk.Box):
                                          for tile in tiles]))
         if drawn == self._drawn:
             return
+        if self.get_transition_running():
+            # Mid-fade: the page fading out cannot be drawn into yet. This
+            # waits until the fade is over.
+            self._waiting = (game, tiles, running, error)
+            return
         self._drawn = drawn
 
-        for layer in self._layers:
-            self.remove(layer)
+        # Into the page out of view, emptied of whatever it showed before.
+        visible = self.get_visible_child()
+        self._page = next(page for page in self._pages
+                          if page is not visible)
+        while (child := self._page.get_first_child()) is not None:
+            self._page.remove(child)
         self._layers = []
 
         if cover is not None:
@@ -108,8 +132,26 @@ class Hero(Gtk.Box):
         # cover's own would only make the window as large as the image.
         self._add(column)
 
+        fade = self._shown is not None and self._shown != game.id
+        self.set_transition_type(Gtk.StackTransitionType.CROSSFADE if fade
+                                 else Gtk.StackTransitionType.NONE)
+        self.set_visible_child(self._page)
+        self._shown = game.id
+
+    def _on_fade(self, _stack, _pspec):
+        if self.get_transition_running():
+            return
+        # The page faded out holds the last game's large textures: let go.
+        for page in self._pages:
+            if page is not self.get_visible_child():
+                while (child := page.get_first_child()) is not None:
+                    page.remove(child)
+        if self._waiting is not None:
+            waiting, self._waiting = self._waiting, None
+            self.show(*waiting)
+
     def _add(self, layer):
-        self.append(layer)
+        self._page.append(layer)
         self._layers.append(layer)
 
     # -- parts -------------------------------------------------------------
@@ -127,10 +169,26 @@ class Hero(Gtk.Box):
             # At most four lines: a long description would push the title
             # out of the window. Details has all of it.
             body = label(game.description, 'hero-body', wrap=True)
+            # Pango's own limit as well: it counts per paragraph and so is
+            # not the limit (that is the cut below), but it keeps the
+            # label's width asking as it did, so the block stays put.
             body.set_lines(BODY_LINES)
             body.set_ellipsize(Pango.EllipsizeMode.END)
             body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-            box.append(_clamped(body, BODY_WIDTH))
+            full = game.description
+
+            def cut():
+                # Cut short, with no way to more: Details has all of it.
+                text = folded(body, full, BODY_LINES) or full
+                if body.get_text() != text:
+                    body.set_text(text)
+                return GLib.SOURCE_REMOVE
+
+            holder = Gtk.Box(halign=Gtk.Align.START)
+            holder.set_layout_manager(
+                AfterAllocation(lambda: GLib.idle_add(cut)))
+            holder.append(body)
+            box.append(_clamped(holder, BODY_WIDTH))
 
         if problem or error:
             box.append(label(problem_text(problem, error), 'danger'))
