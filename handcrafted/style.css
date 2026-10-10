@@ -520,3 +520,41 @@ window.handcrafted button.remove-badge {
     font-size: 12px;
     padding: 0;
 }
+
+/* -- links in the dialog ----------------------------------------------- */
+.links-box {
+    background-color: @fill_2;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+window.handcrafted .links-box scrolledwindow,
+window.handcrafted textview.links-field,
+window.handcrafted textview.links-field text {
+    background: none;
+    color: @text;
+    caret-color: @accent;
+}
+textview.links-field,
+.links-placeholder {
+    font-family: monospace;
+    font-size: 12px;
+}
+.links-placeholder {
+    color: @text_ghost;
+    margin: 14px 16px;
+}
+window.handcrafted button.load {
+    background-color: @fill_hover;
+    border-radius: 999px;
+    padding: 0 18px;
+    min-height: 38px;
+    font-size: 14px;
+}
+window.handcrafted button.load:disabled {
+    opacity: 0.5;
+}
+.load-reason {
+    font-size: 11px;
+    color: @text_muted;
+}

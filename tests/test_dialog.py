@@ -17,7 +17,7 @@ import gi  # noqa: E402
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw  # noqa: E402
+from gi.repository import Adw, Gtk  # noqa: E402
 
 from handcrafted import images  # noqa: E402
 from handcrafted.library import Library  # noqa: E402
@@ -44,6 +44,15 @@ class FakeLauncher:
         self.running_game = None
         for callback in self._listeners:
             callback()
+
+
+def texts(widget):
+    found = [widget.get_label()] if isinstance(widget, Gtk.Label) else []
+    child = widget.get_first_child()
+    while child is not None:
+        found.extend(texts(child))
+        child = child.get_next_sibling()
+    return found
 
 
 def picture_files(contents):
@@ -203,6 +212,74 @@ check('the gear puts it in the name field',
       window._dialog.first_focus is window._dialog._name)
 dialog = window._dialog
 dialog._on_cancel()
+
+section('Images from links')
+
+from fakeweb import BASE, JPEG, PNG  # noqa: E402
+from gi.repository import GLib  # noqa: E402
+
+
+def until(condition, seconds=10):
+    '''Run the main loop until `condition()` holds, as the app would.'''
+    context = GLib.MainContext.default()
+    deadline = GLib.get_monotonic_time() + seconds * 1_000_000
+    while not condition() and GLib.get_monotonic_time() < deadline:
+        context.iteration(False)
+    return condition()
+
+
+before = on_disk(kettle)
+window.open_editor(kettle)
+dialog = window._dialog
+cache = window._dialog_folder
+check('the dialog has a download folder of its own', cache.is_dir(), cache)
+check('Load is greyed out while the field is empty',
+      not dialog._load.get_sensitive())
+dialog._links.get_buffer().set_text(
+    f'{BASE}/cover.png\n\n{BASE}/missing.png\nnot a link\n'
+    f'{BASE}/photo.jpg\n')
+check('a link frees it', dialog._load.get_sensitive())
+seen = set()
+dialog._load.connect('notify::label',
+                     lambda button, _: seen.add(button.get_label()))
+dialog._load.emit('clicked')
+check('and finishes', until(lambda: not dialog._loader.running))
+until(lambda: dialog._load.get_label() == 'Load')
+check('it counted along while loading',
+      {'Loading 1/3…', 'Loading 2/3…', 'Loading 3/3…'} <= seen, seen)
+check('two images are appended at the end',
+      [p.read_bytes() for p in dialog._pictures] == before + [PNG, JPEG],
+      len(dialog._pictures))
+check('the failed and the refused lines stay in the field',
+      dialog._link_text().splitlines()
+      == [f'{BASE}/missing.png', 'not a link'], dialog._link_text())
+check('with a summary', dialog._load_summary.get_label() == '2 of 4 failed',
+      dialog._load_summary.get_label())
+check('and a reason per line', len(texts(dialog._load_reasons)) == 2
+      and 'HTTP 404' in texts(dialog._load_reasons)[0],
+      texts(dialog._load_reasons))
+check('nothing in the library yet', on_disk(kettle) == before)
+dialog._links.get_buffer().set_text(
+    f'{BASE}/cover.png\n{BASE}/missing.png')
+dialog._start_loading()
+until(lambda: len(dialog._pictures) == len(before) + 3)
+dialog._primary.emit('clicked')
+check('saving mid-load keeps what had arrived',
+      len(on_disk(kettle)) == len(before) + 3, len(on_disk(kettle)))
+dialog._primary.emit('clicked')
+check('and the download folder is gone', not cache.exists())
+before = on_disk(kettle)
+
+window.open_editor(kettle)
+dialog = window._dialog
+cache = window._dialog_folder
+dialog._links.get_buffer().set_text(f'{BASE}/cover.png')
+dialog._load.emit('clicked')
+until(lambda: not dialog._loader.running)
+check('loaded, waiting in the folder', any(cache.iterdir()))
+dialog._on_cancel()
+check('Cancel leaves the library alone', on_disk(kettle) == before)
+check('and nothing in the download folder', not cache.exists())
 
 section('Delete')
 

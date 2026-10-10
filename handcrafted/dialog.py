@@ -8,6 +8,8 @@ It writes nothing itself. What was entered goes to on_save, and the window
 does the writing, so everything that changes the library happens in one
 place. Until then the images are only a list of paths here: reordering and
 removing touch nothing on disk, and Cancel leaves everything as it was.
+Images loaded from links wait in a download folder of this dialog's own
+until then.
 '''
 
 import os
@@ -19,6 +21,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
+from . import download  # noqa: E402
 from .i18n import _  # noqa: E402
 from .widgets import Cover, Fixed, Ratio, label  # noqa: E402
 
@@ -28,6 +31,9 @@ THUMB_WIDTH = 84
 THUMB_HEIGHT = 47   # 84 at 16:9
 DESCRIPTION_LINES = 3
 LINE_HEIGHT = 24    # 16 px at 1.5
+LINK_LINES = 4
+LINK_LINE_HEIGHT = 18  # 12 px mono
+SHOWN_URL = 48      # longer links are shortened in the middle
 
 
 class GameDialog(Gtk.Box):
@@ -40,7 +46,7 @@ class GameDialog(Gtk.Box):
     '''
 
     def __init__(self, game, pictures, running, on_save, on_cancel,
-                 on_delete, focus='name'):
+                 on_delete, focus='name', folder=None):
         super().__init__(hexpand=True, vexpand=True)
         self.add_css_class('scrim')
         self._game = game
@@ -50,6 +56,8 @@ class GameDialog(Gtk.Box):
         self._on_cancel = on_cancel
         self._on_delete = on_delete
         self._armed = False
+        self._folder = folder  # where loaded images wait until Save
+        self._loader = download.Loader(GLib.idle_add)
 
         keys = Gtk.EventControllerKey()
         keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
@@ -162,7 +170,47 @@ class GameDialog(Gtk.Box):
         self._thumbs.add_css_class('dialog-thumbs')
         column.append(self._thumbs)
         self._draw_images()
+        if self._folder is not None:
+            column.append(self._link_field())
         return column
+
+    def _link_field(self):
+        '''Paste links, press Load: the images land in the list above.'''
+        self._links = Gtk.TextView(wrap_mode=Gtk.WrapMode.CHAR,
+                                   accepts_tab=False)
+        self._links.add_css_class('links-field')
+        buffer = self._links.get_buffer()
+        buffer.connect('changed', lambda *_: self._update_load())
+
+        frame = Gtk.ScrolledWindow(propagate_natural_height=False)
+        frame.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        frame.set_size_request(-1, LINK_LINES * LINK_LINE_HEIGHT)
+        frame.set_child(self._links)
+        # Gtk.TextView has no placeholder of its own.
+        self._links_hint = label(_('One image URL per line'),
+                                 'links-placeholder')
+        self._links_hint.set_valign(Gtk.Align.START)
+        self._links_hint.set_can_target(False)
+        field = Gtk.Overlay()
+        field.add_css_class('links-box')
+        field.set_child(frame)
+        field.add_overlay(self._links_hint)
+
+        self._load = Gtk.Button(label=_('Load'), halign=Gtk.Align.END)
+        self._load.add_css_class('load')
+        self._load.connect('clicked', lambda *_: self._start_loading())
+
+        self._load_summary = label('', 'danger')
+        self._load_reasons = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                                     spacing=2)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.append(field)
+        box.append(self._load)
+        box.append(self._load_summary)
+        box.append(self._load_reasons)
+        self._show_failures([], 0)
+        self._update_load()
+        return box
 
     def _draw_images(self):
         '''The preview and the row of thumbnails, from self._pictures.'''
@@ -221,6 +269,75 @@ class GameDialog(Gtk.Box):
         self._pictures_changed = True
         self._draw_images()
 
+    # -- loading -----------------------------------------------------------
+
+    def _link_text(self):
+        buffer = self._links.get_buffer()
+        return buffer.get_text(buffer.get_start_iter(),
+                               buffer.get_end_iter(), False)
+
+    def _update_load(self):
+        text = self._link_text()
+        self._links_hint.set_visible(not text)
+        self._load.set_sensitive(bool(text.strip())
+                                 and not self._loader.running)
+
+    def _start_loading(self):
+        links, rejected, later = download.parse(self._link_text())
+        self._rejected, self._later = rejected, later
+        self._total = len(links) + len(rejected)
+        if not links:
+            self._finished([])
+            return
+        self._loader.start(links, self._folder, self._progress,
+                           self._arrived, self._finished)
+        self._update_load()
+
+    def _progress(self, n, total):
+        self._load.set_label(_('Loading {n}/{total}…').format(
+            n=n, total=total))
+        self._load.set_sensitive(False)
+
+    def _arrived(self, url, path):
+        '''One image is in: appended at the end, and its line leaves the
+        field. Only that line -- anything typed meanwhile stays.'''
+        self._pictures.append(path)
+        self._pictures_changed = True
+        self._draw_images()
+        lines = self._link_text().splitlines()
+        for n, line in enumerate(lines):
+            if line.strip() == url:
+                del lines[n]
+                break
+        self._links.get_buffer().set_text(
+            '\n'.join(line for line in lines if line.strip()))
+
+    def _finished(self, failed):
+        '''What failed stayed in the field; say why.'''
+        self._show_failures(failed + self._rejected, self._total)
+        self._load.set_label(_('Load'))
+        self._update_load()
+
+    def _show_failures(self, failures, total):
+        self._load_summary.set_visible(bool(failures))
+        self._load_summary.set_label(
+            _('{failed} of {total} failed').format(failed=len(failures),
+                                                   total=total))
+        while (child := self._load_reasons.get_first_child()) is not None:
+            self._load_reasons.remove(child)
+        for line, reason in failures:
+            self._load_reasons.append(label(
+                f'{_shorten(line)} — {reason}', 'mono', 'load-reason',
+                wrap=True))
+
+    def stop_loading(self):
+        '''Whatever is still on its way is not wanted any more.'''
+        if self._loader.running:
+            self._loader.cancel()
+            if self._folder is not None:
+                self._load.set_label(_('Load'))
+                self._update_load()
+
     # -- state -------------------------------------------------------------
 
     def set_running(self, running):
@@ -255,6 +372,8 @@ class GameDialog(Gtk.Box):
     def _save(self):
         if not self._primary.get_sensitive():
             return  # Enter in an empty name field
+        # Saved is what has arrived; the rest is not waited for.
+        self.stop_loading()
         buffer = self._description.get_buffer()
         executable = self._executable.get_text()
         if executable.startswith('~'):
@@ -309,3 +428,11 @@ class GameDialog(Gtk.Box):
             self._on_cancel()
             return True
         return False
+
+
+def _shorten(url):
+    '''Long links shortened in the middle, where they say the least.'''
+    if len(url) <= SHOWN_URL:
+        return url
+    head = SHOWN_URL // 2 - 1
+    return f'{url[:head]}…{url[-(SHOWN_URL - head - 1):]}'

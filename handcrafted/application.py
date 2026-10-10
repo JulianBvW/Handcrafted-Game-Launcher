@@ -8,7 +8,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
-from . import config  # noqa: E402
+from . import config, download  # noqa: E402
 from .launch import Launcher  # noqa: E402
 from .library import Library  # noqa: E402
 from .window import HandcraftedWindow  # noqa: E402
@@ -38,6 +38,10 @@ class HandcraftedApplication(Adw.Application):
             Gdk.Display.get_default(), provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
+        # Images loaded for a dialog that never got saved or cancelled --
+        # the program ended with it open.
+        download.clear_all()
+
         self.library = Library()
         # Once, here and nowhere else: a session still open at this moment
         # belongs to a run that ended while a game was being played --
@@ -56,6 +60,7 @@ class HandcraftedApplication(Adw.Application):
     def do_shutdown(self):
         if self.library is not None:
             self.library.close()
+        download.clear_all()
         Adw.Application.do_shutdown(self)
 
     def do_activate(self):

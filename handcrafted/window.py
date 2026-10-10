@@ -9,7 +9,7 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gio, GLib, Gtk  # noqa: E402
 
-from . import config, images, state  # noqa: E402
+from . import config, download, images, state  # noqa: E402
 from .detail import Detail  # noqa: E402
 from .dialog import GameDialog  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -35,6 +35,7 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
         self._error = None      # (game_id, why) when Play just failed
         self._dialog = None     # the GameDialog while it is open
         self._dialog_game = None  # the id it edits; None when adding
+        self._dialog_folder = None  # where its downloads wait until Save
 
         self._state = state.load()
         self.set_default_size(self._state['width'], self._state['height'])
@@ -153,12 +154,19 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
             return
         pictures = images.listing(game_id) if game is not None else []
         self._dialog_game = game_id
+        try:
+            self._dialog_folder = download.new_folder()
+        except OSError:
+            # No room in ~/.cache: the dialog still opens, only without the
+            # link field.
+            self._dialog_folder = None
         self._dialog = GameDialog(
             game, pictures,
             running=(game is not None
                      and self._launcher.running_game == game.id),
             on_save=self._save_editor, on_cancel=self.close_editor,
-            on_delete=self._delete_from_editor, focus=focus)
+            on_delete=self._delete_from_editor, focus=focus,
+            folder=self._dialog_folder)
         self._overlay.add_overlay(self._dialog)
         # The sheet covers the library for the mouse; this does the same for
         # the keyboard, so Tab cannot wander into a Play button behind it.
@@ -167,9 +175,14 @@ class HandcraftedWindow(Gtk.ApplicationWindow):
 
     def close_editor(self):
         if self._dialog is not None:
+            self._dialog.stop_loading()
             self._overlay.remove_overlay(self._dialog)
             self._dialog = None
             self._dialog_game = None
+            # Saved images were copied into the library by now; anything
+            # else loaded for this dialog goes.
+            download.remove_folder(self._dialog_folder)
+            self._dialog_folder = None
             self._body.set_can_focus(True)
             self._body.set_can_target(True)
 

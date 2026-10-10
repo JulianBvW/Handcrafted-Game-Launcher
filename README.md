@@ -8,9 +8,9 @@ a list of image links. That is where the name comes from.
 
 ## Status
 
-In development, and usable: add, edit and delete games, see them grouped
-by status, play and stop them with the time measured. Images can be
-reordered and removed; loading them from a list of links comes next.
+In development, and usable: add, edit and delete games, give them images
+from a list of links, see them grouped by status, play and stop them with
+the time measured. The hero view above the library comes next.
 
 To look at it without a library of your own, fill a throwaway one:
 
@@ -69,6 +69,7 @@ No test runner to install. Run each file directly:
 /usr/bin/python3 tests/test_images.py       # images on disk
 /usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
 /usr/bin/python3 tests/test_launch.py       # starting and timing games
+/usr/bin/python3 tests/test_download.py     # images from links, locally
 DISPLAY=:0 /usr/bin/python3 tests/test_window.py   # the library view
 DISPLAY=:0 /usr/bin/python3 tests/test_dialog.py   # adding and editing
 ```
