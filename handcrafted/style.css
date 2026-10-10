@@ -405,6 +405,9 @@ window.handcrafted button.status-menu:hover .figure {
         rgba(11, 11, 12, 0.85) 30%,
         rgba(11, 11, 12, 0) 62%);
 }
+.hero-glyph {
+    margin: 36px 0 0 40px;
+}
 .hero-info {
     padding: 40px 40px 28px 40px;
 }

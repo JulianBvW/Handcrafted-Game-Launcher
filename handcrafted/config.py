@@ -52,6 +52,7 @@ LANGUAGE_PATTERN = re.compile(r'[a-z]{2,3}(_[A-Z]{2})?')
 
 # The stylesheet ships next to the code.
 STYLE_FILE = Path(__file__).resolve().parent / 'style.css'
+GLYPH_FILE = Path(__file__).resolve().parent / 'glyph.svg'
 
 
 def _apply_user_config():

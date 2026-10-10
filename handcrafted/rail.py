@@ -13,7 +13,8 @@ from gi.repository import Gtk, Pango  # noqa: E402
 
 from . import formatting, images, library  # noqa: E402
 from .i18n import _  # noqa: E402
-from .widgets import Cover, Fixed, dot, label, status_label  # noqa: E402
+from .widgets import (Cover, Fixed, dot, glyph, label,  # noqa: E402
+                      status_label)
 
 WIDTH = 340
 THUMB_WIDTH = 104
@@ -47,6 +48,9 @@ class Rail(Gtk.Box):
         # the big title rather than floating at its middle.
         title = label(_('Library'), 'section-title')
         title.set_valign(Gtk.Align.BASELINE_FILL)
+        mark = glyph(word=title)
+        mark.set_valign(Gtk.Align.BASELINE_FILL)
+        title_row.append(mark)
         title_row.append(title)
         self._totals = label('', 'mono', 'meta-muted')
         self._totals.set_valign(Gtk.Align.BASELINE_FILL)

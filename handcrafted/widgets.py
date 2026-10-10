@@ -3,9 +3,11 @@
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk  # noqa: E402
+gi.require_version('Gsk', '4.0')
+gi.require_version('Graphene', '1.0')
+from gi.repository import Graphene, Gsk, Gtk, Pango  # noqa: E402
 
-from . import thumbs  # noqa: E402
+from . import config, thumbs  # noqa: E402
 from .i18n import _  # noqa: E402
 
 
@@ -222,3 +224,71 @@ class PlayButton(Gtk.Button):
             # Only when it changes: setting one costs more than the rest of
             # this together.
             self.set_tooltip_text(tooltip)
+
+
+# -- the glyph ---------------------------------------------------------------
+
+# Where the drawing lies inside glyph.svg's 288-unit square: x, y, width,
+# height. Lined up by what is drawn, not by the square around it, the glyph
+# can be made exactly as tall as a word.
+GLYPH_BOX = 288
+GLYPH_INK = (12, 8, 264, 272)
+
+
+class _GlyphLayout(Gtk.LayoutManager):
+    '''The glyph with its drawing `height` px tall -- or, given a `word`
+    label, as tall as that word is inked, from the top of its tallest
+    letter to the bottom of its lowest, and on the same baseline.'''
+
+    def __init__(self, height=None, word=None):
+        super().__init__()
+        self._height = height
+        self._word = word
+
+    def _metrics(self):
+        '''(scale from glyph units to pixels, drawing height, how much of
+        it lies above the baseline)'''
+        if self._word is None:
+            return self._height / GLYPH_INK[3], self._height, -1
+        layout = self._word.get_layout()
+        ink, _logical = layout.get_pixel_extents()
+        baseline = layout.get_baseline() / Pango.SCALE
+        return ink.height / GLYPH_INK[3], ink.height, baseline - ink.y
+
+    def do_measure(self, _widget, orientation, _for_size):
+        scale, height, above = self._metrics()
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            width = round(GLYPH_INK[2] * scale)
+            return width, width, -1, -1
+        above = round(above) if above >= 0 else -1
+        return round(height), round(height), above, above
+
+    def do_allocate(self, widget, _width, height, baseline):
+        scale, drawing, above = self._metrics()
+        box = round(GLYPH_BOX * scale)
+        # Where the drawing starts: on a shared baseline, as far above it as
+        # the word reaches; otherwise centred in the height given.
+        if baseline >= 0 and above >= 0:
+            top = baseline - above
+        else:
+            top = (height - drawing) / 2
+        # The square is larger than the drawing: shifted so the drawing
+        # starts there.
+        point = Graphene.Point()
+        point.init(-GLYPH_INK[0] * scale, top - GLYPH_INK[1] * scale)
+        widget.get_first_child().allocate(
+            box, box, -1, Gsk.Transform.new().translate(point))
+
+
+def glyph(height=None, word=None):
+    '''Handcrafted's glyph, the needle and thread, at a fixed `height` or
+    as tall as the label `word` (see _GlyphLayout).'''
+    picture = Gtk.Picture.new_for_paintable(
+        thumbs.texture(config.GLYPH_FILE, 128))
+    picture.set_can_shrink(True)
+    picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+    box = Gtk.Box(hexpand=False, vexpand=False)
+    box.set_layout_manager(_GlyphLayout(height, word))
+    box.append(picture)
+    box.add_css_class('glyph')
+    return box

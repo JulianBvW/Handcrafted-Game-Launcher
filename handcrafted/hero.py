@@ -16,9 +16,10 @@ from gi.repository import Adw, Gtk, Pango  # noqa: E402
 
 from . import formatting, images, launch, thumbs  # noqa: E402
 from .i18n import _  # noqa: E402
-from .widgets import (Cover, PlayButton, Ratio, label,  # noqa: E402
+from .widgets import (Cover, PlayButton, Ratio, glyph, label,  # noqa: E402
                       play_mode, problem_text)
 
+GLYPH_HEIGHT = 40
 INFO_WIDTH = 680
 BODY_WIDTH = 540
 BODY_LINES = 4
@@ -91,6 +92,13 @@ class Hero(Gtk.Box):
                 box = Gtk.Box()
                 box.add_css_class(veil)
                 self._add(box)
+
+        # Top left, in the corner the veils keep darkest.
+        mark = glyph(height=GLYPH_HEIGHT)
+        mark.set_halign(Gtk.Align.START)
+        mark.set_valign(Gtk.Align.START)
+        mark.add_css_class('hero-glyph')
+        self._add(mark)
 
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
                          valign=Gtk.Align.END)
