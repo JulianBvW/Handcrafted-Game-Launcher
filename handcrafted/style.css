@@ -545,9 +545,10 @@ textview.links-field,
     font-family: monospace;
     font-size: 12px;
 }
+/* No margin of its own: it lies in the same padded box as the text, so
+   any margin would set it apart from where typing starts. */
 .links-placeholder {
     color: @text_ghost;
-    margin: 14px 16px;
 }
 window.handcrafted button.load {
     background-color: @fill_hover;
