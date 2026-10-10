@@ -90,7 +90,7 @@ check('the main button is greyed out without a name',
       not dialog._primary.get_sensitive())
 dialog._name.set_text('   ')
 check('and with only spaces', not dialog._primary.get_sensitive())
-dialog._name.set_text('  Night Ferry ')
+dialog._name.set_text('  Nine Hours Across ')
 check('a name frees it', dialog._primary.get_sensitive())
 dialog._description.get_buffer().set_text('Two strangers.')
 dialog._version.set_text('0.3')
@@ -98,7 +98,7 @@ dialog._executable.set_text('~/Games/ferry/run.sh')
 dialog._primary.emit('clicked')
 ferry = window._selected
 game = library.get(ferry)
-check('saving adds the game', game is not None and game.name == 'Night Ferry',
+check('saving adds the game', game is not None and game.name == 'Nine Hours Across',
       game)
 check('with what was typed',
       (game.description, game.version) == ('Two strangers.', '0.3'), game)

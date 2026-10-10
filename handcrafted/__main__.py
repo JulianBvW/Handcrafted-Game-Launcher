@@ -23,7 +23,7 @@ def main(argv=None):
     argv = sys.argv if argv is None else argv
 
     # Both before the first window exists: the program name ends up in
-    # WM_CLASS, which the desktop entry will have to match in phase 9.
+    # WM_CLASS, which the desktop entry's StartupWMClass matches.
     from . import config, i18n
     GLib.set_prgname(config.PRG_NAME)
     GLib.set_application_name(config.APP_NAME)

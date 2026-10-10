@@ -32,6 +32,13 @@ class HandcraftedApplication(Adw.Application):
         Adw.StyleManager.get_default().set_color_scheme(
             Adw.ColorScheme.FORCE_DARK)
 
+        # The window's icon, by name, as the desktop entry names it: from the
+        # icon theme once installed, from the package when run from the
+        # repository.
+        icons = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        icons.add_search_path(str(config.ICONS_DIR))
+        Gtk.Window.set_default_icon_name(config.APP_ID)
+
         provider = Gtk.CssProvider()
         provider.load_from_path(str(config.STYLE_FILE))
         Gtk.StyleContext.add_provider_for_display(

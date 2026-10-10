@@ -43,7 +43,9 @@ class Rail(Gtk.Box):
         head.add_css_class('rail-head')
         self.append(head)
 
-        title_row = Gtk.Box(spacing=10)
+        # Tight enough that a longer word than "Library" -- "Bibliothek" --
+        # still fits the 340 px.
+        title_row = Gtk.Box(spacing=8)
         # Both on the baseline, so the small totals sit on the same line as
         # the big title rather than floating at its middle.
         title = label(_('Library'), 'section-title')
@@ -54,8 +56,8 @@ class Rail(Gtk.Box):
         title_row.append(title)
         self._totals = label('', 'mono', 'meta-muted')
         self._totals.set_valign(Gtk.Align.BASELINE_FILL)
+        self._totals.set_hexpand(True)  # pushes + to the right edge
         title_row.append(self._totals)
-        title_row.append(Gtk.Box(hexpand=True))
         add = Gtk.Button(label='+', valign=Gtk.Align.CENTER)
         add.add_css_class('icon-button')
         add.set_tooltip_text(_('Add a game'))

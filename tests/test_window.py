@@ -9,7 +9,7 @@ library of its own and a stand-in launcher, so no game is ever started.
 import os
 import sys
 
-from harness import check, report, sandbox, section
+from harness import REPO, check, report, sandbox, section
 
 if not os.environ.get('DISPLAY'):
     print('  SKIP  no DISPLAY; run as DISPLAY=:0 ... tests/test_window.py')
@@ -321,6 +321,37 @@ window.refresh()
 check('an empty library says so',
       'Your library is empty' in texts(detail))
 check('with totals of nothing', '0 · 0h' in texts(rail))
+
+section('In German')
+
+import shutil  # noqa: E402
+import subprocess  # noqa: E402
+
+from handcrafted import i18n  # noqa: E402
+from handcrafted.rail import WIDTH, Rail  # noqa: E402
+
+if not shutil.which('msgfmt'):
+    print('  SKIP  no msgfmt; sudo apt install gettext')
+else:
+    messages = folder / 'locale' / 'de' / 'LC_MESSAGES'
+    messages.mkdir(parents=True)
+    subprocess.run(['msgfmt', '-o', str(messages / 'handcrafted.mo'),
+                    str(REPO / 'po' / 'de.po')], check=True)
+    real_locale = i18n.LOCALE_DIR
+    i18n.LOCALE_DIR = folder / 'locale'
+    i18n.setup('de')
+    german = Rail(on_select=lambda game_id: None, on_add=lambda: None)
+    german.refresh(library.games(), None, None)
+    german._playing.set_active(True)
+    # As long as the totals get: a big library, played a great deal.
+    german._totals.set_label('99 · 999h 59min')
+    shown = texts(german)
+    check('the rail speaks German', 'Bibliothek' in shown, shown[:3])
+    natural = german.measure(Gtk.Orientation.HORIZONTAL, -1).natural
+    check('and its longer words still fit the 340 px',
+          natural <= WIDTH, natural)
+    i18n.LOCALE_DIR = real_locale
+    i18n.setup('en')
 
 window.close_now()
 library.close()

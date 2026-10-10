@@ -32,7 +32,8 @@ def problem_text(problem, error):
 
 def initial(name):
     '''The letter a placeholder shows: the first one, skipping a leading
-    "The ", so "The Leaf" is filed under L the way a shelf would.'''
+    "The ", so "The Forgetful Leaf" goes under F the way a shelf
+    would have it.'''
     name = name.strip()
     if name.lower().startswith('the ') and name[4:].strip():
         name = name[4:].strip()
@@ -235,25 +236,38 @@ GLYPH_BOX = 288
 GLYPH_INK = (12, 8, 264, 272)
 
 
+# Measured instead of the word itself: a capital, an ascender and a
+# descender, the full height of "Library" -- and the same in a language
+# whose word for it has no descender, such as "Bibliothek".
+GLYPH_MEASURE = 'Lby'
+
+
 class _GlyphLayout(Gtk.LayoutManager):
     '''The glyph with its drawing `height` px tall -- or, given a `word`
-    label, as tall as that word is inked, from the top of its tallest
-    letter to the bottom of its lowest, and on the same baseline.'''
+    label, as tall as its font's letters reach, from the top of a capital
+    to the bottom of a descender, and on the same baseline.'''
 
     def __init__(self, height=None, word=None):
         super().__init__()
         self._height = height
         self._word = word
+        self._measured = None  # (font, metrics), kept until the font changes
 
     def _metrics(self):
         '''(scale from glyph units to pixels, drawing height, how much of
         it lies above the baseline)'''
         if self._word is None:
             return self._height / GLYPH_INK[3], self._height, -1
-        layout = self._word.get_layout()
-        ink, _logical = layout.get_pixel_extents()
-        baseline = layout.get_baseline() / Pango.SCALE
-        return ink.height / GLYPH_INK[3], ink.height, baseline - ink.y
+        # Asked at every measure and allocate: worked out once per font.
+        font = self._word.get_pango_context().get_font_description()
+        font = font.to_string() if font is not None else ''
+        if self._measured is None or self._measured[0] != font:
+            layout = self._word.create_pango_layout(GLYPH_MEASURE)
+            ink, _logical = layout.get_pixel_extents()
+            baseline = layout.get_baseline() / Pango.SCALE
+            self._measured = (font, (ink.height / GLYPH_INK[3], ink.height,
+                                     baseline - ink.y))
+        return self._measured[1]
 
     def do_measure(self, _widget, orientation, _for_size):
         scale, height, above = self._metrics()

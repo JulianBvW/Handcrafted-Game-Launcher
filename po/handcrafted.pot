@@ -1,0 +1,393 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the Handcrafted package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Handcrafted\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-10 20:10+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: handcrafted/detail.py:50 handcrafted/dialog.py:92
+msgid "Edit game"
+msgstr ""
+
+#: handcrafted/detail.py:70
+msgid "Your library is empty"
+msgstr ""
+
+#: handcrafted/detail.py:165
+msgid "Fix path…"
+msgstr ""
+
+#: handcrafted/detail.py:175
+msgid "Playtime"
+msgstr ""
+
+#: handcrafted/detail.py:176
+msgid "Last played"
+msgstr ""
+
+#: handcrafted/detail.py:177
+msgid "Added"
+msgstr ""
+
+#: handcrafted/detail.py:185
+msgid "Status"
+msgstr ""
+
+#: handcrafted/dialog.py:92
+msgid "New game"
+msgstr ""
+
+#: handcrafted/dialog.py:96
+msgid "Name"
+msgstr ""
+
+#: handcrafted/dialog.py:118
+msgid "Version (optional)"
+msgstr ""
+
+#: handcrafted/dialog.py:125
+msgid "Executable (.sh)"
+msgstr ""
+
+#: handcrafted/dialog.py:128
+msgid "Browse"
+msgstr ""
+
+#: handcrafted/dialog.py:137
+msgid "Save changes"
+msgstr ""
+
+#: handcrafted/dialog.py:137
+msgid "Add to library"
+msgstr ""
+
+#: handcrafted/dialog.py:141
+msgid "Cancel"
+msgstr ""
+
+#: handcrafted/dialog.py:147 handcrafted/dialog.py:371
+msgid "Delete game"
+msgstr ""
+
+#: handcrafted/dialog.py:191
+msgid "One image URL per line"
+msgstr ""
+
+#: handcrafted/dialog.py:200 handcrafted/dialog.py:330
+#: handcrafted/dialog.py:350
+msgid "Load"
+msgstr ""
+
+#: handcrafted/dialog.py:223
+msgid "cover image"
+msgstr ""
+
+#: handcrafted/dialog.py:236
+msgid "Make cover"
+msgstr ""
+
+#: handcrafted/dialog.py:242
+msgid "COVER"
+msgstr ""
+
+#: handcrafted/dialog.py:254
+msgid "Remove"
+msgstr ""
+
+#: handcrafted/dialog.py:309
+#, python-brace-format
+msgid "Loading {n}/{total}…"
+msgstr ""
+
+#: handcrafted/dialog.py:336
+#, python-brace-format
+msgid "{failed} of {total} failed"
+msgstr ""
+
+#: handcrafted/dialog.py:362
+msgid "Stop the game first"
+msgstr ""
+
+#: handcrafted/dialog.py:411
+msgid "Click again to delete"
+msgstr ""
+
+#: handcrafted/dialog.py:417
+msgid "Choose the launcher"
+msgstr ""
+
+#: handcrafted/download.py:92 handcrafted/download.py:102
+#: handcrafted/download.py:117
+msgid "not an http(s) link"
+msgstr ""
+
+#: handcrafted/download.py:127
+#, python-brace-format
+msgid "not an image ({type})"
+msgstr ""
+
+#: handcrafted/download.py:128
+msgid "no type given"
+msgstr ""
+
+#: handcrafted/download.py:131
+#, python-brace-format
+msgid "unsupported image type ({type})"
+msgstr ""
+
+#: handcrafted/download.py:135 handcrafted/download.py:155
+msgid "larger than 20 MB"
+msgstr ""
+
+#: handcrafted/download.py:142
+msgid "cancelled"
+msgstr ""
+
+#: handcrafted/download.py:144 handcrafted/download.py:176
+#: handcrafted/download.py:181
+msgid "timed out"
+msgstr ""
+
+#: handcrafted/download.py:159 handcrafted/download.py:185
+msgid "broken response"
+msgstr ""
+
+#: handcrafted/download.py:197 handcrafted/download.py:203
+msgid "could not be read as an image"
+msgstr ""
+
+#: handcrafted/download.py:199
+#, python-brace-format
+msgid "too large ({width} × {height})"
+msgstr ""
+
+#: handcrafted/formatting.py:21
+msgid "Jan"
+msgstr ""
+
+#: handcrafted/formatting.py:21
+msgid "Feb"
+msgstr ""
+
+#: handcrafted/formatting.py:21
+msgid "Mar"
+msgstr ""
+
+#: handcrafted/formatting.py:21
+msgid "Apr"
+msgstr ""
+
+#: handcrafted/formatting.py:21
+msgid "May"
+msgstr ""
+
+#: handcrafted/formatting.py:21
+msgid "Jun"
+msgstr ""
+
+#: handcrafted/formatting.py:22
+msgid "Jul"
+msgstr ""
+
+#: handcrafted/formatting.py:22
+msgid "Aug"
+msgstr ""
+
+#: handcrafted/formatting.py:22
+msgid "Sep"
+msgstr ""
+
+#: handcrafted/formatting.py:22
+msgid "Oct"
+msgstr ""
+
+#: handcrafted/formatting.py:22
+msgid "Nov"
+msgstr ""
+
+#: handcrafted/formatting.py:23
+msgid "Dec"
+msgstr ""
+
+#: handcrafted/formatting.py:31
+#, python-brace-format
+msgid "{hours}h {minutes}m"
+msgstr ""
+
+#: handcrafted/formatting.py:33
+#, python-brace-format
+msgid "{minutes}m"
+msgstr ""
+
+#: handcrafted/formatting.py:34
+msgid "0h"
+msgstr ""
+
+#: handcrafted/formatting.py:44
+msgid "Never"
+msgstr ""
+
+#: handcrafted/formatting.py:49
+msgid "Today"
+msgstr ""
+
+#: handcrafted/formatting.py:51
+msgid "Yesterday"
+msgstr ""
+
+#: handcrafted/formatting.py:53
+#, python-brace-format
+msgid "{n} day ago"
+msgid_plural "{n} days ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: handcrafted/formatting.py:55
+msgid "Last week"
+msgstr ""
+
+#: handcrafted/formatting.py:58
+#, python-brace-format
+msgid "{n} week ago"
+msgid_plural "{n} weeks ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: handcrafted/formatting.py:61
+msgid "Last month"
+msgstr ""
+
+#: handcrafted/formatting.py:65
+#, python-brace-format
+msgid "{n} month ago"
+msgid_plural "{n} months ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: handcrafted/formatting.py:68
+msgid "Last year"
+msgstr ""
+
+#: handcrafted/formatting.py:70
+#, python-brace-format
+msgid "{n} year ago"
+msgid_plural "{n} years ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: handcrafted/formatting.py:76
+#, python-brace-format
+msgid "{day} {month} {year}"
+msgstr ""
+
+#: handcrafted/hero.py:145
+msgid "Details"
+msgstr ""
+
+#: handcrafted/hero.py:153
+msgid "Played"
+msgstr ""
+
+#: handcrafted/hero.py:154
+msgid "Last"
+msgstr ""
+
+#: handcrafted/hero.py:181
+msgid "Running"
+msgstr ""
+
+#: handcrafted/rail.py:49
+msgid "Library"
+msgstr ""
+
+#: handcrafted/rail.py:61
+msgid "Add a game"
+msgstr ""
+
+#: handcrafted/rail.py:68
+msgid "Everything"
+msgstr ""
+
+#: handcrafted/rail.py:131
+#, python-brace-format
+msgid "Now playing · {n}"
+msgstr ""
+
+#: handcrafted/rail.py:134
+msgid "Now playing"
+msgstr ""
+
+#: handcrafted/widgets.py:16
+msgid "New"
+msgstr ""
+
+#: handcrafted/widgets.py:16
+msgid "Playing"
+msgstr ""
+
+#: handcrafted/widgets.py:16
+msgid "Done"
+msgstr ""
+
+#: handcrafted/widgets.py:17
+msgid "Abandoned"
+msgstr ""
+
+#: handcrafted/widgets.py:25
+msgid "Executable is not marked as runnable"
+msgstr ""
+
+#: handcrafted/widgets.py:27
+msgid "Executable not found"
+msgstr ""
+
+#: handcrafted/widgets.py:30
+#, python-brace-format
+msgid "Could not start: {reason}"
+msgstr ""
+
+#: handcrafted/widgets.py:220
+msgid "Running · Stop"
+msgstr ""
+
+#: handcrafted/widgets.py:220
+msgid "Play"
+msgstr ""
+
+#: handcrafted/widgets.py:222
+msgid "Another game is running"
+msgstr ""
+
+#: handcrafted/window.py:398
+#, python-brace-format
+msgid "Could not save the images: {reason}"
+msgstr ""
+
+#: handcrafted/window.py:437
+msgid "A game is still running"
+msgstr ""
+
+#: handcrafted/window.py:438
+msgid "Its playtime will not be counted if Handcrafted closes now."
+msgstr ""
+
+#: handcrafted/window.py:440
+msgid "Keep open"
+msgstr ""
+
+#: handcrafted/window.py:440
+msgid "Close anyway"
+msgstr ""

@@ -40,22 +40,22 @@ GAMES = [
      'is never quite off the boil. Short, warm, and kinder than it needs '
      'to be.',
      '1.2', 'playing', 23.7, 0, 40, ('#d9822b', '#6b3a1e', '#f2c14e')),
-    ('The Leaf', 'Autumn in a village that forgets one thing every day.',
+    ('The Forgetful Leaf', 'Autumn in a village that forgets one thing every day.',
      'v0.9.3', 'playing', 4.2, 3, 21, ('#3f7d4e', '#a3b18a')),
-    ('Night Ferry', 'Two strangers, one crossing, nine hours to talk.',
+    ('Nine Hours Across', 'Two strangers, one crossing, nine hours to talk.',
      '', 'playing', 11.0, 15, 70, ('#1d3557', '#457b9d', '#a8dadc',
                                    '#e63946')),
-    ('Paper Lanterns', 'A festival town, a lost sister, and lanterns that '
+    ('Lanternwick', 'A festival town, a lost sister, and lanterns that '
      'remember who lit them.', '2.0.1', 'new', 0, None, 2,
      ('#9d4edd', '#e0aaff')),
-    ('Glasshouse', 'Botany, grief, and a greenhouse that will not stay '
+    ('Glasshouse Grief', 'Botany, grief, and a greenhouse that will not stay '
      'shut.', '1.0', 'new', 0, None, 9, ()),
-    ('Salt Road', 'Caravans and contracts on a dried-up sea.', '1.4.2',
+    ('Dry Sea Ledger', 'Caravans and contracts on a dried-up sea.', '1.4.2',
      'done', 17.5, 40, 120, ('#c9a227', '#7f5539', '#ddb892')),
-    ('Long Division', 'A maths tutor and the one student who keeps '
+    ('Wrong Way Right', 'A maths tutor and the one student who keeps '
      'getting the right answer the wrong way.', '', 'done', 6.3, 200, 300,
      ('#264653', '#2a9d8f')),
-    ('Static', 'Late-night radio and a caller who knows too much.',
+    ('Late Caller', 'Late-night radio and a caller who knows too much.',
      '0.4', 'abandoned', 1.1, 400, 420, ('#3a3a40', '#8d99ae')),
     ('Missing Launcher', 'Its executable points nowhere, to show the '
      'error line.', '1.0', 'new', 0, None, 1, ('#e76f51',)),

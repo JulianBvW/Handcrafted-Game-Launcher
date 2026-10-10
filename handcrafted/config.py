@@ -54,6 +54,10 @@ LANGUAGE_PATTERN = re.compile(r'[a-z]{2,3}(_[A-Z]{2})?')
 STYLE_FILE = Path(__file__).resolve().parent / 'style.css'
 GLYPH_FILE = Path(__file__).resolve().parent / 'glyph.svg'
 
+# The application icon, as <APP_ID>.svg. install.py puts a copy where the
+# desktop looks for icons; run from the repository, the program looks here.
+ICONS_DIR = Path(__file__).resolve().parent / 'icons'
+
 
 def _apply_user_config():
     '''Let config.json override the few defaults that can be overridden.
