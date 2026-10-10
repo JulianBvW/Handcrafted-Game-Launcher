@@ -6,6 +6,7 @@ file. A file is not a settings window, so that non-goal stands.
 '''
 
 import json
+import re
 from pathlib import Path
 
 # D-Bus name. A second start finds the running instance by it and hands over
@@ -43,6 +44,12 @@ DATA_DIR = DEFAULT_DATA_DIR
 LIBRARY_FILE = DATA_DIR / 'library.db'
 IMAGES_DIR = DATA_DIR / 'images'
 
+# The interface language: a code such as 'de' or 'de_DE'. None follows the
+# system. English needs no catalogue and is what anything untranslated
+# falls back to.
+LANGUAGE = None
+LANGUAGE_PATTERN = re.compile(r'[a-z]{2,3}(_[A-Z]{2})?')
+
 # The stylesheet ships next to the code.
 STYLE_FILE = Path(__file__).resolve().parent / 'style.css'
 
@@ -58,9 +65,10 @@ def _apply_user_config():
     Starts from the defaults every time, so calling it twice gives the same
     result as calling it once -- the tests rely on that.
     '''
-    global WIDTH, HEIGHT, DATA_DIR, LIBRARY_FILE, IMAGES_DIR
+    global WIDTH, HEIGHT, DATA_DIR, LIBRARY_FILE, IMAGES_DIR, LANGUAGE
 
     WIDTH, HEIGHT, DATA_DIR = DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_DATA_DIR
+    LANGUAGE = None
 
     try:
         settings = json.loads(CONFIG_FILE.read_text(encoding='utf-8'))
@@ -91,6 +99,10 @@ def _apply_user_config():
         # to be started from -- the same file, two different libraries.
         if folder is not None and folder.is_absolute():
             DATA_DIR = folder
+
+    language = settings.get('language')
+    if isinstance(language, str) and LANGUAGE_PATTERN.fullmatch(language):
+        LANGUAGE = language
 
     # Derived last, so a moved data_dir takes everything under it along.
     LIBRARY_FILE = DATA_DIR / 'library.db'

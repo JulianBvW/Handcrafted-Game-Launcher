@@ -4,11 +4,15 @@
 '''
 
 import locale
+import shutil
+import subprocess
+import tempfile
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from harness import check, report, section
 
-from handcrafted import formatting
+from handcrafted import formatting, i18n
 
 
 def ts(*args):
@@ -75,5 +79,50 @@ if german:
     locale.setlocale(locale.LC_TIME, 'C')
 else:
     print('  SKIP  no de_DE.UTF-8 locale on this machine')
+
+section('Through a translation')
+
+# A small German catalogue, built the way the real one will be: a .po file
+# compiled by msgfmt. Proves the chain from _() and ngettext() to the text.
+CATALOGUE = r'''
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "{n} day ago"
+msgid_plural "{n} days ago"
+msgstr[0] "vor {n} Tag"
+msgstr[1] "vor {n} Tagen"
+
+msgid "Mar"
+msgstr "Mär"
+
+msgid "{day} {month} {year}"
+msgstr "{day}. {month} {year}"
+'''
+
+if shutil.which('msgfmt'):
+    folder = Path(tempfile.mkdtemp(prefix='handcrafted-i18n-'))
+    messages = folder / 'de' / 'LC_MESSAGES'
+    messages.mkdir(parents=True)
+    (folder / 'de.po').write_text(CATALOGUE, encoding='utf-8')
+    subprocess.run(['msgfmt', '-o', str(messages / 'handcrafted.mo'),
+                    str(folder / 'de.po')], check=True)
+    i18n.LOCALE_DIR = folder
+    i18n.setup('de')
+    got = days_ago(3)
+    check('plural through the catalogue', got == 'vor 3 Tagen', got)
+    got = formatting.added(ts(2026, 3, 5, 12))
+    check('month and pattern through the catalogue',
+          got == '5. Mär 2026', got)
+    got = formatting.last_played(None)
+    check('an untranslated text stays English', got == 'Never', got)
+    i18n.setup('xx')
+    check('a language without a catalogue is English', days_ago(3)
+          == '3 days ago')
+    shutil.rmtree(folder)
+else:
+    print('  SKIP  no msgfmt on this machine')
 
 report()

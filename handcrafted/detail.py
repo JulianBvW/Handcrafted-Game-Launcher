@@ -1,0 +1,228 @@
+'''The detail column: everything about the selected game.
+
+Scrolls by itself. The cover sits faded behind the top of the column, and
+over it, held to 1100 px: the title row with Play, the description, four
+figures, and every image.
+'''
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+from . import formatting, images, launch  # noqa: E402
+from .i18n import _  # noqa: E402
+from .library import STATUSES  # noqa: E402
+from .widgets import (Cover, PlayButton, Ratio, dot, label,  # noqa: E402
+                      status_label)
+
+CONTENT_WIDTH = 1100
+BACKDROP_HEIGHT = 440
+GALLERY_WIDTH = CONTENT_WIDTH // 2
+
+
+class Detail(Gtk.ScrolledWindow):
+    '''Calls on_play(game_id) for Play and Stop alike, and on_edit(game_id)
+    for the gear and for "Fix path…". The status menu acts through the
+    window's `win.status` action.'''
+
+    def __init__(self, on_play, on_edit):
+        super().__init__(hexpand=True, vexpand=True)
+        self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.add_css_class('detail')
+        self._on_play = on_play
+        self._on_edit = on_edit
+        self._shown = None
+
+    def show(self, game, running, error=None):
+        '''Draw `game` (a library.Game, or None for an empty library).
+        `running` is the id of the game that runs, or None. `error` is why
+        the last attempt to start this game failed, if it did.'''
+        if game is None:
+            empty = label(_('Your library is empty'), 'meta-muted',
+                          xalign=0.5)
+            empty.set_valign(Gtk.Align.CENTER)
+            self.set_child(empty)
+            self._shown = None
+            return
+
+        pictures = images.listing(game.id)
+        overlay = Gtk.Overlay()
+        overlay.set_child(self._backdrop(game, pictures))
+        content = self._content(game, pictures, running, error)
+        overlay.add_overlay(content)
+        # The content, not the backdrop, decides how tall the column is.
+        overlay.set_measure_overlay(content, True)
+
+        changed = game.id != self._shown
+        position = self.get_vadjustment().get_value()
+        self.set_child(overlay)
+        self._shown = game.id
+        # Another game starts at its top, not wherever the last one was. The
+        # same game, drawn again after a status change or a game ending,
+        # stays where it was scrolled to -- once the new content has a size.
+        target = 0 if changed else position
+        GLib.idle_add(self._scroll_to, target)
+
+    def _scroll_to(self, value):
+        self.get_vadjustment().set_value(value)
+        return GLib.SOURCE_REMOVE
+
+    # -- parts -------------------------------------------------------------
+
+    def _backdrop(self, game, pictures):
+        backdrop = Gtk.Overlay(valign=Gtk.Align.START)
+        backdrop.set_size_request(-1, BACKDROP_HEIGHT)
+        if pictures:
+            backdrop.set_child(Cover(pictures[0], game.name, CONTENT_WIDTH))
+            backdrop.add_css_class('backdrop')
+            veil = Gtk.Box()
+            veil.add_css_class('backdrop-veil')
+            backdrop.add_overlay(veil)
+        return backdrop
+
+    def _content(self, game, pictures, running, error):
+        column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=22)
+        column.add_css_class('detail-content')
+        problem = launch.check(game.executable)
+        column.append(self._title_row(game, running, problem))
+
+        if problem or error:
+            column.append(self._error_row(game, problem, error))
+
+        if game.description:
+            body = label(game.description, 'detail-body', wrap=True)
+            body.set_max_width_chars(80)
+            body.set_halign(Gtk.Align.START)
+            column.append(body)
+
+        column.append(self._figures(game))
+        column.append(self._gallery(game, pictures))
+
+        clamp = Adw.Clamp(maximum_size=CONTENT_WIDTH,
+                          tightening_threshold=CONTENT_WIDTH)
+        clamp.set_child(column)
+        clamp.set_valign(Gtk.Align.START)
+        return clamp
+
+    def _title_row(self, game, running, problem):
+        eyebrow = Gtk.Box(spacing=8)
+        eyebrow.add_css_class('eyebrow')
+        eyebrow.append(dot(game.status, size=8))
+        eyebrow.append(label(status_label(game.status).upper(), 'eyebrow'))
+        if game.version:
+            eyebrow.append(label('·', 'eyebrow', 'dim'))
+            eyebrow.append(label(game.version.upper(), 'eyebrow'))
+
+        title = label(game.name, 'detail-title', wrap=True)
+
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                       hexpand=True, valign=Gtk.Align.END)
+        left.append(eyebrow)
+        left.append(title)
+
+        play = PlayButton('large')
+        play.set_valign(Gtk.Align.END)
+        if problem:
+            play.set_mode('broken')
+        elif running is None:
+            play.set_mode('play')
+        elif running == game.id:
+            play.set_mode('running')
+        else:
+            play.set_mode('blocked')
+        play.connect('clicked', lambda *_: self._on_play(game.id))
+
+        gear = Gtk.Button(valign=Gtk.Align.END)
+        gear.set_child(Gtk.Image(icon_name='emblem-system-symbolic',
+                                 pixel_size=22))
+        gear.add_css_class('ring-button')
+        gear.set_tooltip_text(_('Edit game'))
+        self._connect_edit(gear, game)
+
+        row = Gtk.Box(spacing=24)
+        row.append(left)
+        row.append(play)
+        row.append(gear)
+        return row
+
+    def _error_row(self, game, problem, error):
+        if problem == 'not executable':
+            message = _('Executable is not marked as runnable')
+        elif problem:
+            message = _('Executable not found')
+        else:
+            # It looked fine, and still would not start: say what the system
+            # said rather than nothing at all.
+            message = _('Could not start: {reason}').format(reason=error)
+        row = Gtk.Box(spacing=12)
+        row.append(label(message, 'danger'))
+        fix = Gtk.Button(label=_('Fix path…'))
+        fix.add_css_class('quiet-button')
+        self._connect_edit(fix, game)
+        row.append(fix)
+        return row
+
+    def _connect_edit(self, button, game):
+        if self._on_edit is None:
+            button.set_sensitive(False)  # the dialog arrives in phase 5
+        else:
+            button.connect('clicked', lambda *_: self._on_edit(game.id))
+
+    def _figures(self, game):
+        grid = Gtk.Grid(column_homogeneous=True, column_spacing=24)
+        grid.add_css_class('figures')
+        for column, (caption, value) in enumerate((
+                (_('Playtime'), formatting.playtime(game.playtime)),
+                (_('Last played'), formatting.last_played(game.last_played)),
+                (_('Added'), formatting.added(game.added)))):
+            grid.attach(self._figure(caption, label(value, 'figure')),
+                        column, 0, 1, 1)
+        grid.attach(self._figure(_('Status'), self._status_menu(game)),
+                    3, 0, 1, 1)
+        return grid
+
+    def _figure(self, caption, value):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.append(label(caption.upper(), 'mono-label'))
+        box.append(value)
+        return box
+
+    def _status_menu(self, game):
+        '''Looks like the other figures; is a menu.'''
+        menu = Gio.Menu()
+        for status in STATUSES:
+            menu.append(status_label(status), f'win.status::{status}')
+
+        face = Gtk.Box(spacing=10)
+        face.append(dot(game.status, size=10))
+        face.append(label(status_label(game.status), 'figure'))
+        arrow = Gtk.Image(icon_name='pan-down-symbolic', pixel_size=14)
+        arrow.add_css_class('dim')
+        face.append(arrow)
+
+        button = Gtk.MenuButton(menu_model=menu, halign=Gtk.Align.START)
+        button.set_child(face)
+        button.add_css_class('status-menu')
+        return button
+
+    def _gallery(self, game, pictures):
+        grid = Gtk.Grid(column_homogeneous=True, column_spacing=16,
+                        row_spacing=16)
+        grid.add_css_class('gallery')
+        if not pictures:
+            empty = Ratio(Cover(None, game.name, GALLERY_WIDTH, stripe=12,
+                                placeholder_text=_('no images')))
+            empty.add_css_class('gallery-empty')
+            grid.attach(empty, 0, 0, 1, 1)
+            # An empty second column keeps the placeholder at half width.
+            grid.attach(Gtk.Box(hexpand=True), 1, 0, 1, 1)
+            return grid
+        for n, path in enumerate(pictures):
+            cell = Ratio(Cover(path, game.name, GALLERY_WIDTH))
+            cell.add_css_class('gallery-image')
+            grid.attach(cell, n % 2, n // 2, 1, 1)
+        if len(pictures) == 1:
+            grid.attach(Gtk.Box(hexpand=True), 1, 0, 1, 1)
+        return grid

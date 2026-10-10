@@ -26,7 +26,8 @@ def with_settings(settings):
 def at_defaults():
     return (config.WIDTH == config.DEFAULT_WIDTH
             and config.HEIGHT == config.DEFAULT_HEIGHT
-            and config.DATA_DIR == config.DEFAULT_DATA_DIR)
+            and config.DATA_DIR == config.DEFAULT_DATA_DIR
+            and config.LANGUAGE is None)
 
 
 section('Nothing usable in the file')
@@ -92,6 +93,19 @@ check('a relative folder is ignored', at_defaults(), str(config.DATA_DIR))
 with_settings({'data_dir': '~nobody-by-this-name/lib'})
 check('~ of an unknown user is ignored, not raised', at_defaults(),
       str(config.DATA_DIR))
+
+section('Language')
+
+with_settings({})
+check('no language follows the system', config.LANGUAGE is None)
+for code in ('de', 'en', 'de_DE', 'fil'):
+    with_settings({'language': code})
+    check(f'{code} is a language', config.LANGUAGE == code,
+          repr(config.LANGUAGE))
+for code in ('German', 'DE', 'de-DE', '../etc', '', 'd', True, ['de']):
+    with_settings({'language': code})
+    check(f'{code!r} is not a language', config.LANGUAGE is None,
+          repr(config.LANGUAGE))
 
 section('Pathological JSON')
 

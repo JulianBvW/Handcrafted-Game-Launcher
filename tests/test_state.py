@@ -29,9 +29,15 @@ check('a list gives the defaults', stored('[1, 2]') == state.defaults())
 section('Values')
 
 loaded = stored(json.dumps({'width': 1700, 'height': 950,
-                            'maximized': True}))
+                            'maximized': True, 'selected': 7}))
 check('a valid state is taken',
-      loaded == {'width': 1700, 'height': 950, 'maximized': True}, loaded)
+      loaded == {'width': 1700, 'height': 950, 'maximized': True,
+                 'selected': 7}, loaded)
+
+loaded = stored(json.dumps({'selected': True}))
+check('true is not a game', loaded['selected'] is None, loaded)
+loaded = stored(json.dumps({'selected': '7'}))
+check('a string is not a game', loaded['selected'] is None, loaded)
 
 loaded = stored(json.dumps({'width': True, 'height': '900'}))
 check('bools and strings are not sizes',
@@ -48,18 +54,24 @@ check('too small is raised to the minimum',
 
 loaded = stored(json.dumps({'width': 1500, 'x': 10, 'y': 20}))
 check('position keys from elsewhere are ignored',
-      set(loaded) == {'width', 'height', 'maximized'}, loaded)
+      set(loaded) == {'width', 'height', 'maximized', 'selected'}, loaded)
 
 section('Round trip')
 
-state.save(1440, 810, False)
+state.save({'width': 1440, 'height': 810, 'maximized': False,
+            'selected': 3})
 check('what was saved comes back',
-      state.load() == {'width': 1440, 'height': 810, 'maximized': False})
+      state.load() == {'width': 1440, 'height': 810, 'maximized': False,
+                       'selected': 3})
 check('no scratch file is left behind',
       not config.STATE_FILE.with_suffix('.json.tmp').exists())
 
-state.save(1440, 810, True)
+state.save({'width': 1440, 'height': 810, 'maximized': True,
+            'selected': None, 'stray': 'x'})
 check('maximized comes back', state.load()['maximized'] is True)
+check('no selection comes back as none', state.load()['selected'] is None)
+check('keys that are not state are not written',
+      'stray' not in json.loads(config.STATE_FILE.read_text()))
 
 loaded = stored('[' * 100000 + ']' * 100000)
 check('nesting deep enough to exhaust recursion gives the defaults',
@@ -75,7 +87,7 @@ else:
     config.STATE_FILE.unlink()
     os.chmod(folder, 0o500)
     try:
-        state.save(1500, 900, False)
+        state.save(state.defaults())
         check('a read-only folder does not raise', True)
     finally:
         os.chmod(folder, 0o700)

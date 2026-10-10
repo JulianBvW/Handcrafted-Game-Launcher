@@ -24,9 +24,12 @@ def main(argv=None):
 
     # Both before the first window exists: the program name ends up in
     # WM_CLASS, which the desktop entry will have to match in phase 9.
-    from . import config
+    from . import config, i18n
     GLib.set_prgname(config.PRG_NAME)
     GLib.set_application_name(config.APP_NAME)
+
+    # Before any text is looked up.
+    i18n.setup(config.LANGUAGE)
 
     from .application import HandcraftedApplication
     app = HandcraftedApplication()

@@ -60,11 +60,13 @@ class HandcraftedApplication(Adw.Application):
 
     def do_activate(self):
         if self.window is None:
-            self.window = HandcraftedWindow(application=self)
+            self.window = HandcraftedWindow(
+                self.library, self.launcher, application=self)
         self.window.present()
 
     def _on_signal(self):
         if self.window is not None:
-            self.window.close()
+            # No question asked: at logout nobody is there to answer it.
+            self.window.close_now()
         self.quit()
         return GLib.SOURCE_REMOVE

@@ -1,8 +1,9 @@
-'''What the window remembers between sessions: how big it was.
+'''What the window remembers between sessions: how big it was, and which
+game was selected.
 
-Only the size and whether it was maximized. GTK 4 can neither read nor set
-a window's position on X11, so where the window opens is left to the window
-manager.
+Only the size and whether it was maximized, not the place. GTK 4 can
+neither read nor set a window's position on X11, so where the window opens
+is left to the window manager.
 
 Free of GTK, so the rules can be checked without a display.
 '''
@@ -15,7 +16,7 @@ from . import config
 def defaults():
     '''The window as it opens before it has ever been resized.'''
     return {'width': config.WIDTH, 'height': config.HEIGHT,
-            'maximized': False}
+            'maximized': False, 'selected': None}
 
 
 def load():
@@ -42,20 +43,26 @@ def load():
     if isinstance(stored.get('maximized'), bool):
         state['maximized'] = stored['maximized']
 
+    # A game id. Whether that game still exists is the window's question.
+    selected = stored.get('selected')
+    if isinstance(selected, int) and not isinstance(selected, bool):
+        state['selected'] = selected
+
     state['width'] = max(config.MIN_WIDTH, state['width'])
     state['height'] = max(config.MIN_HEIGHT, state['height'])
     return state
 
 
-def save(width, height, maximized):
-    '''Write the size, or quietly give up.
+def save(data):
+    '''Write the state, or quietly give up. `data` has the keys of
+    defaults(); anything else in it is left out.
 
     Through a neighbouring file and a rename, so that dying mid-write leaves
     the previous version intact instead of half a file.
     '''
     path = config.STATE_FILE
     scratch = path.with_suffix(path.suffix + '.tmp')
-    data = {'width': width, 'height': height, 'maximized': maximized}
+    data = {key: data.get(key) for key in defaults()}
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         scratch.write_text(json.dumps(data, indent=2) + '\n',

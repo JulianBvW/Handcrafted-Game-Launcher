@@ -35,3 +35,6 @@ htmlcov/
 /config.json
 /library.db
 /images/
+
+# Compiled translations, built from po/
+/locale/

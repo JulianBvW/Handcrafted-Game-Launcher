@@ -8,8 +8,16 @@ a list of image links. That is where the name comes from.
 
 ## Status
 
-In development. It opens an empty window that remembers its size, and that
-is all for now.
+In development. The library view works: games grouped by status, their
+details, Play and Stop with the time measured. Adding and editing games
+from the interface comes next.
+
+To look at it without a library of your own, fill a throwaway one:
+
+```
+HOME=/tmp/hc-demo /usr/bin/python3 tests/seed.py
+HOME=/tmp/hc-demo /usr/bin/python3 -m handcrafted
+```
 
 ## Requirements
 
@@ -40,13 +48,15 @@ The library lives in `~/.local/share/handcrafted/`, the window size in
 {
   "width": 1600,
   "height": 900,
-  "data_dir": "~/.local/share/handcrafted"
+  "data_dir": "~/.local/share/handcrafted",
+  "language": "en"
 }
 ```
 
-`width` and `height` are the size of the very first window. After that, the
-size it was last left at wins. A missing, broken or half-wrong file is not
-an error: whatever cannot be used is ignored.
+`language` picks the interface language; without it, the system's is
+used. `width` and `height` are the size of the very first window. After
+that, the size it was last left at wins. A missing, broken or half-wrong
+file is not an error: whatever cannot be used is ignored.
 
 ## Tests
 
@@ -59,6 +69,7 @@ No test runner to install. Run each file directly:
 /usr/bin/python3 tests/test_images.py       # images on disk
 /usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
 /usr/bin/python3 tests/test_launch.py       # starting and timing games
+DISPLAY=:0 /usr/bin/python3 tests/test_window.py   # the library view
 ```
 
 ## What it will not do
