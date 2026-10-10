@@ -270,7 +270,9 @@ window.handcrafted .switch button:checked .dot.accent {
 .group-head .count {
     opacity: 0.7;
 }
-.rail-row {
+/* As specific as `.rail-list row` above, which zeroes every row's padding
+   and would otherwise win: without these 8 px the thumbnails touched. */
+.rail-list row.rail-row {
     padding: 8px;
     border-radius: 10px;
     transition: background-color 120ms ease-out;
@@ -378,4 +380,146 @@ scrollbar slider {
     border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.15);
     border: none;
+}
+
+/* -- dialog ------------------------------------------------------------ */
+/* Laid over the whole window: no card, no frame, the form stands directly
+   on this. Denser than the draft's .82, which counted on a blur GTK 4.14
+   cannot do. */
+.scrim {
+    background-color: rgba(6, 6, 7, 0.92);
+    padding: 32px;
+}
+.scrim scrolledwindow,
+.scrim viewport {
+    background: none;
+}
+.dialog-title {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -1.2px;
+}
+
+/* Entries without libadwaita's box and focus glow. */
+window.handcrafted entry.underlined,
+window.handcrafted entry.boxed {
+    background: none;
+    box-shadow: none;
+    outline: none;
+    border: none;
+    min-height: 0;
+    color: @text;
+    caret-color: @accent;
+}
+window.handcrafted entry.underlined,
+window.handcrafted scrolledwindow.underlined {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0;
+    padding: 10px 0;
+}
+window.handcrafted entry.name-field {
+    font-size: 22px;
+    font-weight: 600;
+}
+window.handcrafted scrolledwindow.underlined,
+window.handcrafted textview.description-field,
+window.handcrafted textview.description-field text {
+    background: none;
+    color: @text;
+    caret-color: @accent;
+}
+textview.description-field {
+    font-size: 16px;
+    line-height: 1.5;
+}
+window.handcrafted entry.boxed {
+    background-color: @fill_2;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: monospace;
+    font-size: 13px;
+}
+window.handcrafted entry placeholder,
+window.handcrafted textview text placeholder {
+    color: @text_ghost;
+}
+
+window.handcrafted button.browse {
+    background-color: @fill_hover;
+    border-radius: 12px;
+    padding: 0 18px;
+    font-size: 14px;
+}
+
+.dialog-buttons {
+    margin-top: 6px;
+}
+window.handcrafted .dialog-buttons button {
+    min-height: 52px;
+}
+window.handcrafted button.primary {
+    background-color: @accent;
+    color: @on_accent;
+    border-radius: 999px;
+    padding: 0 28px;
+    font-size: 16px;
+    font-weight: 700;
+}
+window.handcrafted button.primary:hover {
+    background-color: @accent_hover;
+}
+window.handcrafted button.primary:disabled {
+    background-color: @fill_3;
+    color: @text_ghost;
+    opacity: 1;
+}
+window.handcrafted .dialog-buttons button.quiet-button {
+    padding: 0 12px;
+    font-size: 16px;
+}
+window.handcrafted button.delete {
+    color: @danger;
+    font-size: 15px;
+    border-radius: 999px;
+    padding: 0 20px;
+}
+window.handcrafted button.delete:hover {
+    background-color: alpha(@danger, 0.12);
+}
+window.handcrafted button.delete.armed {
+    background-color: @danger_strong;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.cover-preview .cover {
+    border-radius: 14px;
+}
+window.handcrafted button.dialog-thumb {
+    border-radius: 6px;
+}
+button.dialog-thumb .cover {
+    border-radius: 6px;
+}
+.dialog-thumbs flowboxchild {
+    padding: 0;
+    background: none;
+}
+.cover-badge {
+    background-color: @accent;
+    color: @on_accent;
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+}
+window.handcrafted button.remove-badge {
+    min-width: 18px;
+    min-height: 18px;
+    border-radius: 999px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #ffffff;
+    font-size: 12px;
+    padding: 0;
 }

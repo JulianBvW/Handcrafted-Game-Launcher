@@ -35,7 +35,7 @@ def label(text='', *classes, xalign=0.0, wrap=False):
 
 
 class _RatioLayout(Gtk.LayoutManager):
-    '''As wide as it is given, and exactly as high as that width calls for.
+    '''As wide as it is given, and as high as that width calls for.
     Gtk.AspectFrame only fits a child into the space it gets; it does not
     ask for the right height.'''
 
@@ -50,25 +50,63 @@ class _RatioLayout(Gtk.LayoutManager):
         if orientation == Gtk.Orientation.HORIZONTAL:
             return 0, 0, -1, -1
         height = round(for_size / self._ratio) if for_size > 0 else 0
-        return height, height, -1, -1
+        # The height as natural size, not as minimum: GTK expects a height
+        # that depends on the width to shrink as the width grows, and says
+        # so loudly when a minimum grows with it.
+        return 0, height, -1, -1
 
-    def do_allocate(self, widget, width, height, baseline):
-        child = widget.get_first_child()
-        while child is not None:
-            child.allocate(width, height, baseline, None)
-            child = child.get_next_sibling()
+    def do_allocate(self, widget, width, height, _baseline):
+        # Given more height than the ratio calls for, keep the ratio and
+        # sit at the top rather than stretch.
+        _allocate_children(widget, width,
+                           min(height, round(width / self._ratio)))
+
+
+class _FixedLayout(Gtk.LayoutManager):
+    '''Exactly this size, whatever the child would like. A Gtk.Picture
+    asks for the size of its image -- twice the shown width, since the
+    textures are loaded oversampled -- and size_request() is only ever a
+    minimum, never a cap.'''
+
+    def __init__(self, width, height):
+        super().__init__()
+        self._size = (width, height)
+
+    def do_measure(self, _widget, orientation, _for_size):
+        size = self._size[0 if orientation == Gtk.Orientation.HORIZONTAL
+                          else 1]
+        return size, size, -1, -1
+
+    def do_allocate(self, widget, width, height, _baseline):
+        _allocate_children(widget, width, height)
+
+
+def _allocate_children(widget, width, height):
+    child = widget.get_first_child()
+    while child is not None:
+        child.allocate(width, height, -1, None)
+        child = child.get_next_sibling()
+
+
+def _holder(layout, child, expand):
+    # A plain Box with its layout swapped, rather than a Gtk.Widget
+    # subclass: PyGObject never calls do_dispose on those, so a subclass
+    # could not let go of its child and GTK would complain on every rebuild.
+    box = Gtk.Box(hexpand=expand, vexpand=False, valign=Gtk.Align.START)
+    box.set_layout_manager(layout)
+    box.append(child)
+    return box
 
 
 def Ratio(child, ratio=16 / 9):  # noqa: N802 -- reads like the widget it is
-    '''`child` held at a fixed aspect ratio.
+    '''`child` at a fixed aspect ratio, as wide as it is given.'''
+    return _holder(_RatioLayout(ratio), child, expand=True)
 
-    A plain Box with its layout swapped, rather than a Gtk.Widget subclass:
-    PyGObject never calls do_dispose on those, so a subclass could not let
-    go of its child and GTK would complain on every rebuild.
-    '''
-    box = Gtk.Box(hexpand=True)
-    box.set_layout_manager(_RatioLayout(ratio))
-    box.append(child)
+
+def Fixed(child, width, height):  # noqa: N802
+    '''`child` at exactly width x height.'''
+    box = _holder(_FixedLayout(width, height), child, expand=False)
+    box.set_halign(Gtk.Align.START)
     return box
 
 

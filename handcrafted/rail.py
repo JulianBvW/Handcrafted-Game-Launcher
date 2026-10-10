@@ -11,7 +11,7 @@ from gi.repository import Gtk, Pango  # noqa: E402
 
 from . import formatting, images  # noqa: E402
 from .i18n import _  # noqa: E402
-from .widgets import Cover, dot, label, status_label  # noqa: E402
+from .widgets import Cover, Fixed, dot, label, status_label  # noqa: E402
 
 WIDTH = 340
 THUMB_WIDTH = 104
@@ -51,10 +51,7 @@ class Rail(Gtk.Box):
         add = Gtk.Button(label='+', valign=Gtk.Align.CENTER)
         add.add_css_class('icon-button')
         add.set_tooltip_text(_('Add a game'))
-        if on_add is None:
-            add.set_sensitive(False)  # the dialog arrives in phase 5
-        else:
-            add.connect('clicked', lambda *_: on_add())
+        add.connect('clicked', lambda *_: on_add())
         title_row.append(add)
         head.append(title_row)
 
@@ -118,15 +115,12 @@ class Rail(Gtk.Box):
         return row
 
     def _game_row(self, game):
-        thumb = Gtk.Overlay()
-        thumb.set_size_request(THUMB_WIDTH, THUMB_HEIGHT)
-        # Fixed: the cover inside asks to expand, and would otherwise take
-        # whatever the name beside it leaves over.
-        thumb.set_hexpand(False)
-        thumb.set_valign(Gtk.Align.CENTER)
+        thumb = Gtk.Overlay(hexpand=False, valign=Gtk.Align.CENTER)
         thumb.add_css_class('rail-thumb')
-        thumb.set_child(Cover(images.cover(game.id), game.name, THUMB_WIDTH,
-                              stripe=6, initial_class='initial-22'))
+        thumb.set_child(Fixed(
+            Cover(images.cover(game.id), game.name, THUMB_WIDTH, stripe=6,
+                  initial_class='initial-22'),
+            THUMB_WIDTH, THUMB_HEIGHT))
         if game.id == self._running:
             mark = dot(size=8, accent=True)
             mark.set_halign(Gtk.Align.START)

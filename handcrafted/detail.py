@@ -23,16 +23,17 @@ GALLERY_WIDTH = CONTENT_WIDTH // 2
 
 
 class Detail(Gtk.ScrolledWindow):
-    '''Calls on_play(game_id) for Play and Stop alike, and on_edit(game_id)
-    for the gear and for "Fix path…". The status menu acts through the
-    window's `win.status` action.'''
+    '''Calls on_play(game_id) for Play and Stop alike, on_edit(game_id) for
+    the gear and on_fix_path(game_id) for "Fix path…". The status menu acts
+    through the window's `win.status` action.'''
 
-    def __init__(self, on_play, on_edit):
+    def __init__(self, on_play, on_edit, on_fix_path):
         super().__init__(hexpand=True, vexpand=True)
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.add_css_class('detail')
         self._on_play = on_play
         self._on_edit = on_edit
+        self._on_fix_path = on_fix_path
         self._shown = None
 
     def show(self, game, running, error=None):
@@ -139,7 +140,7 @@ class Detail(Gtk.ScrolledWindow):
                                  pixel_size=22))
         gear.add_css_class('ring-button')
         gear.set_tooltip_text(_('Edit game'))
-        self._connect_edit(gear, game)
+        gear.connect('clicked', lambda *_: self._on_edit(game.id))
 
         row = Gtk.Box(spacing=24)
         row.append(left)
@@ -160,15 +161,9 @@ class Detail(Gtk.ScrolledWindow):
         row.append(label(message, 'danger'))
         fix = Gtk.Button(label=_('Fix path…'))
         fix.add_css_class('quiet-button')
-        self._connect_edit(fix, game)
+        fix.connect('clicked', lambda *_: self._on_fix_path(game.id))
         row.append(fix)
         return row
-
-    def _connect_edit(self, button, game):
-        if self._on_edit is None:
-            button.set_sensitive(False)  # the dialog arrives in phase 5
-        else:
-            button.connect('clicked', lambda *_: self._on_edit(game.id))
 
     def _figures(self, game):
         grid = Gtk.Grid(column_homogeneous=True, column_spacing=24)

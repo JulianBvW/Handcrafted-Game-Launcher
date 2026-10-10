@@ -8,9 +8,9 @@ a list of image links. That is where the name comes from.
 
 ## Status
 
-In development. The library view works: games grouped by status, their
-details, Play and Stop with the time measured. Adding and editing games
-from the interface comes next.
+In development, and usable: add, edit and delete games, see them grouped
+by status, play and stop them with the time measured. Images can be
+reordered and removed; loading them from a list of links comes next.
 
 To look at it without a library of your own, fill a throwaway one:
 
@@ -70,6 +70,7 @@ No test runner to install. Run each file directly:
 /usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
 /usr/bin/python3 tests/test_launch.py       # starting and timing games
 DISPLAY=:0 /usr/bin/python3 tests/test_window.py   # the library view
+DISPLAY=:0 /usr/bin/python3 tests/test_dialog.py   # adding and editing
 ```
 
 ## What it will not do
