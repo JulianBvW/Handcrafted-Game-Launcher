@@ -58,6 +58,7 @@ No test runner to install. Run each file directly:
 /usr/bin/python3 tests/test_library.py      # games and play sessions
 /usr/bin/python3 tests/test_images.py       # images on disk
 /usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
+/usr/bin/python3 tests/test_launch.py       # starting and timing games
 ```
 
 ## What it will not do

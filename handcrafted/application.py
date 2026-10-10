@@ -9,6 +9,8 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
 from . import config  # noqa: E402
+from .launch import Launcher  # noqa: E402
+from .library import Library  # noqa: E402
 from .window import HandcraftedWindow  # noqa: E402
 
 
@@ -19,6 +21,8 @@ class HandcraftedApplication(Adw.Application):
     def __init__(self):
         super().__init__(application_id=config.APP_ID)
         self.window = None
+        self.library = None
+        self.launcher = None
 
     def do_startup(self):
         Adw.Application.do_startup(self)
@@ -34,6 +38,13 @@ class HandcraftedApplication(Adw.Application):
             Gdk.Display.get_default(), provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
+        self.library = Library()
+        # Once, here and nowhere else: a session still open at this moment
+        # belongs to a run that ended while a game was being played --
+        # crashed, or closed on purpose without counting the time.
+        self.library.discard_open_sessions()
+        self.launcher = Launcher(self.library, GLib.idle_add)
+
         # Logging out sends SIGTERM, Ctrl+C in the terminal SIGINT, closing
         # that terminal SIGHUP -- and Python would die on the spot at each.
         # Routed through the main loop instead, so the window still gets to
@@ -41,6 +52,11 @@ class HandcraftedApplication(Adw.Application):
         for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
             GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signum,
                                  self._on_signal)
+
+    def do_shutdown(self):
+        if self.library is not None:
+            self.library.close()
+        Adw.Application.do_shutdown(self)
 
     def do_activate(self):
         if self.window is None:
