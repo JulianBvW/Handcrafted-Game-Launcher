@@ -236,16 +236,17 @@ GLYPH_BOX = 288
 GLYPH_INK = (12, 8, 264, 272)
 
 
-# Measured instead of the word itself: a capital, an ascender and a
-# descender, the full height of "Library" -- and the same in a language
-# whose word for it has no descender, such as "Bibliothek".
-GLYPH_MEASURE = 'Lby'
+# Measured instead of the word itself, so the glyph is the same size in
+# every language: a capital and an ascender, from the top of the taller
+# down to the baseline. Not below it -- a descender, as in "Library", is
+# what the eye ignores when it judges how tall a word is.
+GLYPH_MEASURE = 'Lb'
 
 
 class _GlyphLayout(Gtk.LayoutManager):
     '''The glyph with its drawing `height` px tall -- or, given a `word`
-    label, as tall as its font's letters reach, from the top of a capital
-    to the bottom of a descender, and on the same baseline.'''
+    label, as tall as its font's letters stand, from the top of an
+    ascender down to the baseline, and sitting on that baseline.'''
 
     def __init__(self, height=None, word=None):
         super().__init__()
@@ -265,8 +266,8 @@ class _GlyphLayout(Gtk.LayoutManager):
             layout = self._word.create_pango_layout(GLYPH_MEASURE)
             ink, _logical = layout.get_pixel_extents()
             baseline = layout.get_baseline() / Pango.SCALE
-            self._measured = (font, (ink.height / GLYPH_INK[3], ink.height,
-                                     baseline - ink.y))
+            height = baseline - ink.y  # ascender top to baseline
+            self._measured = (font, (height / GLYPH_INK[3], height, height))
         return self._measured[1]
 
     def do_measure(self, _widget, orientation, _for_size):

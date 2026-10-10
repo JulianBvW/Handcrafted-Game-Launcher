@@ -58,7 +58,10 @@ class Rail(Gtk.Box):
         self._totals.set_valign(Gtk.Align.BASELINE_FILL)
         self._totals.set_hexpand(True)  # pushes + to the right edge
         title_row.append(self._totals)
-        add = Gtk.Button(label='+', valign=Gtk.Align.CENTER)
+        # A drawn icon rather than a '+' character: a character sits where
+        # its font's metrics put it, never quite in the middle of the ring.
+        add = Gtk.Button(valign=Gtk.Align.CENTER)
+        add.set_child(Gtk.Image(icon_name='list-add-symbolic', pixel_size=14))
         add.add_css_class('icon-button')
         add.set_tooltip_text(_('Add a game'))
         add.connect('clicked', lambda *_: on_add())

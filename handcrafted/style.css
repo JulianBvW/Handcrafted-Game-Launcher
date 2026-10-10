@@ -205,8 +205,6 @@ window.handcrafted button.icon-button {
     min-height: 30px;
     border-radius: 999px;
     border: 1px solid @stroke_soft;
-    font-size: 20px;
-    line-height: 1;
 }
 window.handcrafted button:disabled {
     opacity: 0.45;
