@@ -53,8 +53,11 @@ an error: whatever cannot be used is ignored.
 No test runner to install. Run each file directly:
 
 ```
-/usr/bin/python3 tests/test_config.py   # the settings file
-/usr/bin/python3 tests/test_state.py    # the remembered window size
+/usr/bin/python3 tests/test_config.py       # the settings file
+/usr/bin/python3 tests/test_state.py        # the remembered window size
+/usr/bin/python3 tests/test_library.py      # games and play sessions
+/usr/bin/python3 tests/test_images.py       # images on disk
+/usr/bin/python3 tests/test_formatting.py   # playtime and dates as text
 ```
 
 ## What it will not do

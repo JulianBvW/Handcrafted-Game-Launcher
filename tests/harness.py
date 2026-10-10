@@ -5,6 +5,7 @@ test suite that breaks that promise is a strange way to defend it. Run a
 test file directly; it exits non-zero if any check failed.
 '''
 
+import json
 import shutil
 import sys
 import tempfile
@@ -32,17 +33,26 @@ def section(title):
 
 
 def sandbox():
-    '''A config folder of our own, so ~/.config/handcrafted is never touched.
+    '''Config and data folders of our own, so neither ~/.config/handcrafted
+    nor the real library is ever touched.
 
-    Patches the paths in config, which config.py and state.py read at call
-    time rather than import time -- that is what makes this possible at all.
+    Patches the paths in config, which every module reads at call time
+    rather than import time -- that is what makes this possible at all. The
+    data folder is set the way a user would set it, through data_dir in
+    config.json, so that route is exercised on every run.
     '''
     from handcrafted import config
     folder = Path(tempfile.mkdtemp(prefix='handcrafted-test-'))
     config.CONFIG_DIR = folder
     config.CONFIG_FILE = folder / 'config.json'
     config.STATE_FILE = folder / 'state.json'
+    config.CACHE_DIR = folder / 'cache'
+    # Where the data goes when a test removes or rewrites config.json.
+    config.DEFAULT_DATA_DIR = folder / 'data'
+    config.CONFIG_FILE.write_text(
+        json.dumps({'data_dir': str(folder / 'data')}), encoding='utf-8')
     config._apply_user_config()
+    assert config.LIBRARY_FILE == folder / 'data' / 'library.db'
     return folder
 
 
