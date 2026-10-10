@@ -214,18 +214,28 @@ class Detail(Gtk.ScrolledWindow):
         return button
 
     def _gallery(self, game, pictures):
-        grid = Gtk.Grid(column_homogeneous=True, column_spacing=16,
-                        row_spacing=16)
-        grid.add_css_class('gallery')
-        for n, path in enumerate(pictures):
-            cell = Ratio(Cover(path, game.name, GALLERY_WIDTH))
+        '''Every image whole, in its own shape: two columns, each image
+        going to the one that is shorter so far, so the columns stay about
+        even and the order still reads from the top.'''
+        columns = [Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16,
+                           valign=Gtk.Align.START) for _ in range(2)]
+        heights = [0.0, 0.0]  # in widths of a column
+        for path in pictures:
+            texture = thumbs.texture(path, GALLERY_WIDTH)
+            ratio = (texture.get_width() / texture.get_height()
+                     if texture is not None else 16 / 9)
+            cell = Ratio(Cover(path, game.name, GALLERY_WIDTH), ratio,
+                         firm=True)
             cell.add_css_class('gallery-image')
-            grid.attach(cell, n % 2, n // 2, 1, 1)
-        if len(pictures) == 1:
-            # An empty second column keeps a single image at half width.
-            grid.attach(Gtk.Box(hexpand=True), 1, 0, 1, 1)
-        return grid
+            shorter = heights.index(min(heights))
+            columns[shorter].append(cell)
+            heights[shorter] += 1 / ratio
 
+        gallery = Gtk.Box(spacing=16, homogeneous=True)
+        gallery.add_css_class('gallery')
+        for column in columns:
+            gallery.append(column)
+        return gallery
 
 def _adopt(widget):
     '''`widget`, taken out of the drawing it was last in, so it can go into

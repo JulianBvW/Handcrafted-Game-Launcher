@@ -87,6 +87,26 @@ def grids(widget):
     return found
 
 
+def with_class(widget, css_class):
+    '''Every widget under `widget` that has `css_class`, in tree order.'''
+    found = [widget] if widget.has_css_class(css_class) else []
+    child = widget.get_first_child()
+    while child is not None:
+        found.extend(with_class(child, css_class))
+        child = child.get_next_sibling()
+    return found
+
+
+def picture(name, width, height):
+    '''A real image file, as thumbs.py has to be able to read it.'''
+    from gi.repository import GdkPixbuf
+    path = folder / 'pictures' / f'{name}.png'
+    path.parent.mkdir(exist_ok=True)
+    GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, width,
+                         height).savev(str(path), 'png', [], [])
+    return path
+
+
 def launcher_file(name):
     path = folder / 'games' / name / 'run.sh'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,7 +150,7 @@ check('a selection changes the title', 'The Beta' in shown)
 check('and the figures', 'Never' in shown and '0h' in shown, shown)
 check('a game without images shows no gallery and no placeholder',
       'no images' not in shown
-      and not any('gallery' in g.get_css_classes() for g in grids(detail)))
+      and not with_class(detail, 'gallery'))
 check('and its rail row a placeholder initial, skipping "The"',
       'B' in texts(rail))
 
@@ -151,6 +171,28 @@ shown = texts(detail)
 check('a launcher without the x bit says so, not "not found"',
       'Executable is not marked as runnable' in shown, shown)
 library.update(gamma, executable=str(folder / 'gone.sh'))
+
+section('The gallery')
+
+# Wide, tall, square and wide again: each kept in its own shape.
+shapes = [(320, 180), (300, 400), (200, 200), (420, 180)]
+images.replace(gamma, [picture(f'shape{n}', w, h)
+                       for n, (w, h) in enumerate(shapes)])
+window.select(gamma)
+cells = with_class(detail, 'gallery-image')
+ratios = [cell.get_layout_manager()._ratio for cell in cells]
+check('every image is shown, none cropped to 16:9',
+      sorted(round(r, 3) for r in ratios)
+      == sorted(round(w / h, 3) for w, h in shapes), ratios)
+gallery = with_class(detail, 'gallery')[0]
+columns = [gallery.get_first_child(), gallery.get_last_child()]
+counts = [len(with_class(column, 'gallery-image')) for column in columns]
+check('in two columns', counts == [2, 2], counts)
+first = [round(cell.get_layout_manager()._ratio, 3)
+         for cell in with_class(columns[0], 'gallery-image')]
+check('each image going to the column that is shorter so far',
+      first == [round(320 / 180, 3), round(200 / 200, 3)], first)
+images.remove(gamma)
 
 section('A start that fails anyway')
 

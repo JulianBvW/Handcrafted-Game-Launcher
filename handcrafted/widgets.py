@@ -52,9 +52,10 @@ class _RatioLayout(Gtk.LayoutManager):
     Gtk.AspectFrame only fits a child into the space it gets; it does not
     ask for the right height.'''
 
-    def __init__(self, ratio):
+    def __init__(self, ratio, firm=False):
         super().__init__()
         self._ratio = ratio
+        self._firm = firm
 
     def do_get_request_mode(self, _widget):
         return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
@@ -63,9 +64,14 @@ class _RatioLayout(Gtk.LayoutManager):
         if orientation == Gtk.Orientation.HORIZONTAL:
             return 0, 0, -1, -1
         height = round(for_size / self._ratio) if for_size > 0 else 0
-        # The height as natural size, not as minimum: GTK expects a height
-        # that depends on the width to shrink as the width grows, and says
-        # so loudly when a minimum grows with it.
+        if self._firm:
+            # Also as minimum: inside a scrolled column, which gives its
+            # content only the height it cannot do without, a mere wish is
+            # squeezed flat.
+            return height, height, -1, -1
+        # The height as natural size, not as minimum: where the space is
+        # fixed, as for the hero's tiles, a minimum would hold the window
+        # open wider than it wants to be.
         return 0, height, -1, -1
 
     def do_allocate(self, widget, width, height, _baseline):
@@ -111,9 +117,11 @@ def _holder(layout, child, expand):
     return box
 
 
-def Ratio(child, ratio=16 / 9):  # noqa: N802 -- reads like the widget it is
-    '''`child` at a fixed aspect ratio, as wide as it is given.'''
-    return _holder(_RatioLayout(ratio), child, expand=True)
+def Ratio(child, ratio=16 / 9, firm=False):  # noqa: N802 -- reads like a widget
+    '''`child` at a fixed aspect ratio, as wide as it is given. `firm`
+    insists on that height even where the space is short, so a scrolled
+    column scrolls rather than squeezes it.'''
+    return _holder(_RatioLayout(ratio, firm), child, expand=True)
 
 
 def Fixed(child, width, height):  # noqa: N802
